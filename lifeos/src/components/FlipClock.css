@@ -8,7 +8,7 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  animation: fc-fadein 0.25s ease;
+  animation: fc-fadein 0.3s ease;
 }
 
 @keyframes fc-fadein {
@@ -16,6 +16,7 @@
   to   { opacity: 1; }
 }
 
+/* ── Main container ── */
 .flipclock-inner {
   display: flex;
   flex-direction: column;
@@ -23,9 +24,10 @@
   gap: 28px;
   cursor: default;
   padding: 20px;
+  user-select: none;
 }
 
-/* ── Meta ── */
+/* ── Meta row ── */
 .flipclock-meta {
   display: flex;
   align-items: center;
@@ -43,6 +45,7 @@
 .fc-date { font-weight: 500; }
 .fc-day { font-weight: 700; }
 
+/* ── Hint ── */
 .flipclock-hint {
   margin-top: -8px;
 }
@@ -54,11 +57,11 @@
   letter-spacing: 0.1em;
 }
 
-/* ── Digits ── */
+/* ── Digits row ── */
 .flipclock-digits {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
 }
 
 /* ── Separator ── */
@@ -82,15 +85,18 @@
   gap: 8px;
 }
 
-/* ── Digit card ── */
+/* ── Single digit ── */
 .flip-digit {
   position: relative;
   width: 86px;
   height: 120px;
   border-radius: 12px;
-  background: linear-gradient(to right, #161616, #1d1d1d, #141414);
-  box-shadow: 0 10px 30px rgba(0,0,0,0.75);
-  perspective: 500px;
+  background: linear-gradient(to right, #141414, #1d1d1d, #121212);
+  box-shadow:
+    0 10px 30px rgba(0,0,0,0.75),
+    inset 0 1px 0 rgba(255,255,255,0.03);
+  perspective: 800px;
+  transform-style: preserve-3d;
   overflow: hidden;
 }
 
@@ -103,11 +109,12 @@
   top: 50%;
   height: 2px;
   transform: translateY(-1px);
-  background: rgba(0,0,0,0.9);
+  background: rgba(0,0,0,0.95);
   z-index: 50;
+  box-shadow: 0 1px 2px rgba(255,255,255,0.04);
 }
 
-/* Shared half */
+/* ── Shared half card ── */
 .flip-card {
   position: absolute;
   left: 0;
@@ -119,25 +126,25 @@
   backface-visibility: hidden;
 }
 
-/* PERFECT CENTER FIX */
+/* Digit text */
 .flip-card span {
   font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
   font-size: 120px;
   font-weight: 700;
-  color: #d2d2d2;
+  color: #d6d6d6;
   line-height: 1;
   letter-spacing: -4px;
   position: absolute;
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
-  user-select: none;
+  text-rendering: geometricPrecision;
 }
 
-/* ── Top static ── */
+/* ── Static top ── */
 .flip-top-static {
   top: 0;
-  background: rgba(255,255,255,0.03);
+  background: linear-gradient(to bottom, rgba(255,255,255,0.05), rgba(0,0,0,0.08));
   border-radius: 12px 12px 0 0;
 }
 
@@ -145,10 +152,10 @@
   top: 100%;
 }
 
-/* ── Bottom static ── */
+/* ── Static bottom ── */
 .flip-bottom-static {
   bottom: 0;
-  background: rgba(0,0,0,0.18);
+  background: linear-gradient(to bottom, rgba(0,0,0,0.2), rgba(255,255,255,0.01));
   border-radius: 0 0 12px 12px;
 }
 
@@ -159,11 +166,12 @@
 /* ── Animated top ── */
 .flip-top-anim {
   top: 0;
-  background: rgba(255,255,255,0.03);
+  background: linear-gradient(to bottom, rgba(255,255,255,0.05), rgba(0,0,0,0.18));
   border-radius: 12px 12px 0 0;
   transform-origin: bottom center;
-  animation: flipTopAway 0.45s cubic-bezier(0.45, 0, 0.55, 1) forwards;
+  animation: flipTopAway 0.65s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
   z-index: 20;
+  box-shadow: inset 0 -8px 12px rgba(0,0,0,0.35);
 }
 
 .flip-top-anim span {
@@ -173,26 +181,39 @@
 /* ── Animated bottom ── */
 .flip-bottom-anim {
   bottom: 0;
-  background: rgba(0,0,0,0.18);
+  background: linear-gradient(to bottom, rgba(0,0,0,0.28), rgba(255,255,255,0.02));
   border-radius: 0 0 12px 12px;
   transform-origin: top center;
-  animation: flipBottomIn 0.45s cubic-bezier(0.45, 0, 0.55, 1) forwards;
+  animation: flipBottomIn 0.65s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
   z-index: 19;
+  box-shadow: inset 0 8px 12px rgba(0,0,0,0.35);
 }
 
 .flip-bottom-anim span {
   top: 0%;
 }
 
-/* ── Animations ── */
+/* ── Premium flip animations ── */
 @keyframes flipTopAway {
-  0%   { transform: rotateX(0deg); }
-  100% { transform: rotateX(-90deg); }
+  0% {
+    transform: rotateX(0deg);
+    filter: brightness(1);
+  }
+  100% {
+    transform: rotateX(-89deg);
+    filter: brightness(0.72);
+  }
 }
 
 @keyframes flipBottomIn {
-  0%   { transform: rotateX(90deg); }
-  100% { transform: rotateX(0deg); }
+  0% {
+    transform: rotateX(89deg);
+    filter: brightness(0.68);
+  }
+  100% {
+    transform: rotateX(0deg);
+    filter: brightness(1);
+  }
 }
 
 /* ── Landscape ── */
@@ -207,14 +228,9 @@
 
 /* ── Mobile ── */
 @media (max-width: 480px) {
-  .flip-digit {
-    width: 62px;
-    height: 88px;
-  }
-
-  .flip-card span {
-    font-size: 86px;
-    letter-spacing: -2px;
+  .flipclock-inner {
+    gap: 20px;
+    padding: 16px;
   }
 
   .flipclock-digits {
@@ -225,12 +241,33 @@
     gap: 4px;
   }
 
+  .flip-digit {
+    width: 62px;
+    height: 88px;
+    border-radius: 10px;
+  }
+
+  .flip-card span {
+    font-size: 86px;
+    letter-spacing: -2px;
+  }
+
   .flip-sep {
     gap: 8px;
+    padding-bottom: 2px;
   }
 
   .sep-dot {
     width: 5px;
     height: 5px;
+  }
+
+  .fc-date,
+  .fc-day {
+    font-size: 11px;
+  }
+
+  .fc-hint {
+    font-size: 9px;
   }
 }
