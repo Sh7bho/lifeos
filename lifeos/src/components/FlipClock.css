@@ -1,0 +1,249 @@
+.flipclock-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  animation: fc-fadein 0.25s ease;
+}
+
+@keyframes fc-fadein {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.flipclock-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  cursor: default;
+  width: 100%;
+  padding: 20px;
+}
+
+/* ── Digits row ── */
+.flipclock-digits {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* ── Separator dots ── */
+.flip-sep {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-bottom: 4px;
+}
+
+.sep-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #444;
+}
+
+/* ── Pair of two digits ── */
+.flip-pair {
+  display: flex;
+  gap: 6px;
+}
+
+/* ── Single digit card ── */
+.flip-digit {
+  position: relative;
+  width: 80px;
+  height: 120px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #111;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.04);
+}
+
+/* Center line */
+.flip-digit::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0;
+  top: 50%;
+  height: 1.5px;
+  background: #000;
+  z-index: 10;
+}
+
+/* Top half */
+.flip-top {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 50%;
+  background: #1a1a1a;
+  border-radius: 12px 12px 0 0;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 2px;
+}
+
+/* Bottom half */
+.flip-bottom {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 50%;
+  background: #141414;
+  border-radius: 0 0 12px 12px;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 2px;
+}
+
+.flip-top span,
+.flip-bottom span,
+.flip-top-anim span,
+.flip-bottom-anim span {
+  font-family: 'SF Pro Display', -apple-system, 'Helvetica Neue', sans-serif;
+  font-size: 88px;
+  font-weight: 700;
+  color: #c8c8c8;
+  line-height: 1;
+  letter-spacing: -2px;
+  user-select: none;
+}
+
+.flip-bottom span {
+  transform: translateY(-44px);
+}
+
+/* Flip animation — top flap folds down */
+.flip-top-anim {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 50%;
+  background: #1a1a1a;
+  border-radius: 12px 12px 0 0;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 2px;
+  transform-origin: bottom center;
+  animation: flipTop 0.5s cubic-bezier(0.45, 0, 0.55, 1) forwards;
+  z-index: 20;
+  backface-visibility: hidden;
+}
+
+/* Flip animation — bottom flap revealed */
+.flip-bottom-anim {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 50%;
+  background: #141414;
+  border-radius: 0 0 12px 12px;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 2px;
+  transform-origin: top center;
+  animation: flipBottom 0.5s cubic-bezier(0.45, 0, 0.55, 1) forwards;
+  z-index: 19;
+  backface-visibility: hidden;
+}
+
+.flip-bottom-anim span {
+  transform: translateY(-44px);
+}
+
+@keyframes flipTop {
+  0%   { transform: rotateX(0deg);    }
+  100% { transform: rotateX(-90deg);  }
+}
+
+@keyframes flipBottom {
+  0%   { transform: rotateX(90deg);   }
+  100% { transform: rotateX(0deg);    }
+}
+
+/* ── Meta (date / day) ── */
+.flipclock-meta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.fc-date {
+  font-family: var(--font-mono, monospace);
+  font-size: 13px;
+  font-weight: 500;
+  color: #555;
+  letter-spacing: 0.1em;
+}
+
+.fc-day {
+  font-family: var(--font-mono, monospace);
+  font-size: 13px;
+  font-weight: 600;
+  color: #555;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.fc-hint {
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
+  color: #333;
+  letter-spacing: 0.1em;
+}
+
+/* ── Landscape: bigger digits ── */
+.landscape .flip-digit {
+  width: 110px;
+  height: 160px;
+}
+
+.landscape .flip-top span,
+.landscape .flip-bottom span,
+.landscape .flip-top-anim span,
+.landscape .flip-bottom-anim span {
+  font-size: 118px;
+}
+
+.landscape .flip-bottom span,
+.landscape .flip-bottom-anim span {
+  transform: translateY(-59px);
+}
+
+.landscape .flipclock-digits {
+  gap: 16px;
+}
+
+/* ── Mobile: slightly smaller ── */
+@media (max-width: 480px) {
+  .flip-digit {
+    width: 68px;
+    height: 100px;
+  }
+  .flip-top span,
+  .flip-bottom span,
+  .flip-top-anim span,
+  .flip-bottom-anim span {
+    font-size: 72px;
+  }
+  .flip-bottom span,
+  .flip-bottom-anim span {
+    transform: translateY(-36px);
+  }
+  .flipclock-digits {
+    gap: 8px;
+  }
+  .flip-pair {
+    gap: 4px;
+  }
+}
