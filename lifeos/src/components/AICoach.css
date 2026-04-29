@@ -15,6 +15,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  width: 100%;
 }
 
 .aria-status-dot {
@@ -31,7 +32,7 @@
   font-family: var(--font-display);
   font-size: 20px;
   font-weight: 800;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
 }
 
 .coach-role {
@@ -46,6 +47,37 @@
   margin-left: 4px;
 }
 
+.clear-chat-btn {
+  margin-left: auto;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border-bright);
+  color: var(--text);
+  padding: 7px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.clear-chat-btn:hover:not(:disabled) {
+  background: rgba(255,255,255,0.08);
+  border-color: var(--accent-cyan);
+  color: var(--accent-cyan);
+}
+
+.clear-chat-btn:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.clear-chat-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 /* Messages */
 .coach-messages {
   flex: 1;
@@ -58,7 +90,9 @@
   gap: 16px;
 }
 
-.coach-messages::-webkit-scrollbar { display: none; }
+.coach-messages::-webkit-scrollbar {
+  display: none;
+}
 
 .coach-empty {
   margin: auto;
@@ -77,8 +111,8 @@
   font-family: var(--font-display);
   font-size: 18px;
   font-weight: 800;
-  letter-spacing: 0.05em;
-  margin-bottom: 6px;
+  letter-spacing: 0.08em;
+  margin-bottom: 8px;
 }
 
 .coach-empty-sub {
@@ -86,6 +120,7 @@
   font-size: 11px;
   color: var(--text-dim);
   letter-spacing: 0.05em;
+  line-height: 1.7;
 }
 
 .msg {
@@ -114,6 +149,8 @@
   max-width: 85%;
   padding: 12px 16px;
   border-radius: 16px;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.18);
 }
 
 .msg--user .msg-bubble {
@@ -126,7 +163,7 @@
   font-family: var(--font-body);
   font-size: 14px;
   font-weight: 500;
-  line-height: 1.5;
+  line-height: 1.6;
 }
 
 .msg--assistant .msg-bubble {
@@ -139,8 +176,16 @@
   color: var(--text);
   font-family: var(--font-body);
   font-size: 14px;
-  line-height: 1.7;
+  line-height: 1.75;
   white-space: pre-wrap;
+}
+
+.msg-time {
+  margin-top: 8px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-dim);
+  opacity: 0.7;
 }
 
 .msg-bubble--loading {
@@ -158,8 +203,13 @@
   animation: pulse 1.2s ease infinite;
 }
 
-.typing-dot:nth-child(2) { animation-delay: 0.2s; }
-.typing-dot:nth-child(3) { animation-delay: 0.4s; }
+.typing-dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.typing-dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
 
 /* Quick prompts */
 .quick-prompts {
@@ -171,7 +221,9 @@
   flex-shrink: 0;
 }
 
-.quick-prompts::-webkit-scrollbar { display: none; }
+.quick-prompts::-webkit-scrollbar {
+  display: none;
+}
 
 .quick-btn {
   flex-shrink: 0;
@@ -188,9 +240,19 @@
   transition: all 0.2s ease;
 }
 
-.quick-btn:active {
+.quick-btn:hover:not(:disabled) {
+  border-color: var(--accent-cyan);
+  transform: translateY(-2px);
+}
+
+.quick-btn:active:not(:disabled) {
   background: var(--surface3);
   transform: scale(0.96);
+}
+
+.quick-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 /* Input */
@@ -211,12 +273,19 @@
   color: var(--text);
   font-family: var(--font-body);
   font-size: 14px;
+  letter-spacing: 0.02em;
   outline: none;
-  transition: border-color 0.2s ease;
+  transition: all 0.2s ease;
 }
 
-.coach-input:focus { border-color: var(--accent-cyan); }
-.coach-input::placeholder { color: var(--text-muted); }
+.coach-input:focus {
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 0 2px rgba(0,255,255,0.08);
+}
+
+.coach-input::placeholder {
+  color: var(--text-muted);
+}
 
 .send-btn {
   width: 44px;
@@ -235,6 +304,19 @@
   transition: all 0.2s ease;
 }
 
-.send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-.send-btn:not(:disabled):active { transform: scale(0.92); }
-.send-btn--loading { background: var(--surface3); }
+.send-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.send-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.send-btn:not(:disabled):active {
+  transform: scale(0.92);
+}
+
+.send-btn--loading {
+  background: var(--surface3);
+}
