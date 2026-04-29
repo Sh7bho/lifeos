@@ -8,7 +8,6 @@
   margin-bottom: 24px;
 }
 
-/* NEW: header row holds date + clock side by side */
 .dash-header-row {
   display: flex;
   align-items: center;
@@ -223,9 +222,11 @@
   position: relative;
 }
 
+/* FIX: replaced color-mix() with a safe rgba overlay approach */
 .streak-badge--done {
   border-color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 8%, var(--surface3));
+  background: var(--surface3);
+  box-shadow: inset 0 0 0 1000px rgba(var(--accent-rgb, 255,255,255), 0.06);
 }
 
 .streak-icon { font-size: 18px; }
