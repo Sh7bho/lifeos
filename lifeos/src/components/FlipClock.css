@@ -1,3 +1,4 @@
+/* ── Overlay ── */
 .flipclock-overlay {
   position: fixed;
   inset: 0;
@@ -19,159 +20,12 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 24px;
+  gap: 28px;
   cursor: default;
-  width: 100%;
   padding: 20px;
 }
 
-/* ── Digits row ── */
-.flipclock-digits {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-/* ── Separator dots ── */
-.flip-sep {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding-bottom: 4px;
-}
-
-.sep-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #444;
-}
-
-/* ── Pair of two digits ── */
-.flip-pair {
-  display: flex;
-  gap: 6px;
-}
-
-/* ── Single digit card ── */
-.flip-digit {
-  position: relative;
-  width: 80px;
-  height: 120px;
-  border-radius: 12px;
-  overflow: hidden;
-  background: #111;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.04);
-}
-
-/* Center line */
-.flip-digit::after {
-  content: '';
-  position: absolute;
-  left: 0; right: 0;
-  top: 50%;
-  height: 1.5px;
-  background: #000;
-  z-index: 10;
-}
-
-/* Top half */
-.flip-top {
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 50%;
-  background: #1a1a1a;
-  border-radius: 12px 12px 0 0;
-  overflow: hidden;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  padding-bottom: 2px;
-}
-
-/* Bottom half */
-.flip-bottom {
-  position: absolute;
-  bottom: 0; left: 0; right: 0;
-  height: 50%;
-  background: #141414;
-  border-radius: 0 0 12px 12px;
-  overflow: hidden;
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding-top: 2px;
-}
-
-.flip-top span,
-.flip-bottom span,
-.flip-top-anim span,
-.flip-bottom-anim span {
-  font-family: 'SF Pro Display', -apple-system, 'Helvetica Neue', sans-serif;
-  font-size: 88px;
-  font-weight: 700;
-  color: #c8c8c8;
-  line-height: 1;
-  letter-spacing: -2px;
-  user-select: none;
-}
-
-.flip-bottom span {
-  transform: translateY(-44px);
-}
-
-/* Flip animation — top flap folds down */
-.flip-top-anim {
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 50%;
-  background: #1a1a1a;
-  border-radius: 12px 12px 0 0;
-  overflow: hidden;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  padding-bottom: 2px;
-  transform-origin: bottom center;
-  animation: flipTop 0.5s cubic-bezier(0.45, 0, 0.55, 1) forwards;
-  z-index: 20;
-  backface-visibility: hidden;
-}
-
-/* Flip animation — bottom flap revealed */
-.flip-bottom-anim {
-  position: absolute;
-  bottom: 0; left: 0; right: 0;
-  height: 50%;
-  background: #141414;
-  border-radius: 0 0 12px 12px;
-  overflow: hidden;
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding-top: 2px;
-  transform-origin: top center;
-  animation: flipBottom 0.5s cubic-bezier(0.45, 0, 0.55, 1) forwards;
-  z-index: 19;
-  backface-visibility: hidden;
-}
-
-.flip-bottom-anim span {
-  transform: translateY(-44px);
-}
-
-@keyframes flipTop {
-  0%   { transform: rotateX(0deg);    }
-  100% { transform: rotateX(-90deg);  }
-}
-
-@keyframes flipBottom {
-  0%   { transform: rotateX(90deg);   }
-  100% { transform: rotateX(0deg);    }
-}
-
-/* ── Meta (date / day) ── */
+/* ── Meta row ── */
 .flipclock-meta {
   display: flex;
   align-items: center;
@@ -183,66 +37,219 @@
   font-size: 13px;
   font-weight: 500;
   color: #555;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.12em;
 }
 
 .fc-day {
   font-family: var(--font-mono, monospace);
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   color: #555;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
+  letter-spacing: 0.18em;
+}
+
+.flipclock-hint {
+  margin-top: -8px;
 }
 
 .fc-hint {
   font-family: var(--font-mono, monospace);
   font-size: 10px;
-  color: #333;
+  color: #2a2a2a;
   letter-spacing: 0.1em;
 }
 
-/* ── Landscape: bigger digits ── */
+/* ── Digits row ── */
+.flipclock-digits {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* ── Separator ── */
+.flip-sep {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: 4px;
+}
+
+.sep-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #333;
+}
+
+/* ── Pair ── */
+.flip-pair {
+  display: flex;
+  gap: 6px;
+}
+
+/* ── Single digit card ── */
+.flip-digit {
+  position: relative;
+  width: 80px;
+  height: 110px;
+  border-radius: 10px;
+  background: #111;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.8);
+  /* perspective so 3D flips look correct */
+  perspective: 400px;
+}
+
+/* Center divider line */
+.flip-digit::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(50% - 1px);
+  height: 2px;
+  background: #000;
+  z-index: 30;
+  pointer-events: none;
+}
+
+/* ── Shared card half styles ── */
+.flip-card {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 50%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  backface-visibility: hidden;
+}
+
+.flip-card span {
+  font-family: 'SF Pro Display', -apple-system, 'Helvetica Neue', sans-serif;
+  font-size: 80px;
+  font-weight: 700;
+  color: #c8c8c8;
+  line-height: 1;
+  letter-spacing: -2px;
+  user-select: none;
+  /* position so only the relevant half is visible */
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* ── Top half: shows top portion of digit ── */
+.flip-top-static {
+  top: 0;
+  background: #1c1c1c;
+  border-radius: 10px 10px 0 0;
+  align-items: flex-end;  /* align to bottom of top half */
+}
+
+.flip-top-static span {
+  bottom: 0;
+  top: auto;
+}
+
+/* ── Bottom half: shows bottom portion of digit ── */
+.flip-bottom-static {
+  bottom: 0;
+  background: #161616;
+  border-radius: 0 0 10px 10px;
+  align-items: flex-start; /* align to top of bottom half */
+}
+
+.flip-bottom-static span {
+  top: 0;
+  bottom: auto;
+  /* shift up so digit top is clipped, showing only bottom half */
+  transform: translateX(-50%) translateY(-55px);
+}
+
+/* ── Animated top flap: old value folds away downward ── */
+.flip-top-anim {
+  top: 0;
+  background: #1c1c1c;
+  border-radius: 10px 10px 0 0;
+  transform-origin: bottom center;
+  animation: flipTopAway 0.45s cubic-bezier(0.45, 0, 0.55, 1) forwards;
+  z-index: 20;
+  align-items: flex-end;
+}
+
+.flip-top-anim span {
+  bottom: 0;
+  top: auto;
+}
+
+/* ── Animated bottom flap: new value unfolds from top ── */
+.flip-bottom-anim {
+  bottom: 0;
+  background: #161616;
+  border-radius: 0 0 10px 10px;
+  transform-origin: top center;
+  animation: flipBottomIn 0.45s cubic-bezier(0.45, 0, 0.55, 1) forwards;
+  z-index: 19;
+  align-items: flex-start;
+}
+
+.flip-bottom-anim span {
+  top: 0;
+  bottom: auto;
+  transform: translateX(-50%) translateY(-55px);
+}
+
+@keyframes flipTopAway {
+  0%   { transform: rotateX(0deg); }
+  100% { transform: rotateX(-90deg); }
+}
+
+@keyframes flipBottomIn {
+  0%   { transform: rotateX(90deg); }
+  100% { transform: rotateX(0deg); }
+}
+
+/* ── Landscape ── */
 .landscape .flip-digit {
   width: 110px;
-  height: 160px;
+  height: 152px;
 }
 
-.landscape .flip-top span,
-.landscape .flip-bottom span,
-.landscape .flip-top-anim span,
-.landscape .flip-bottom-anim span {
-  font-size: 118px;
+.landscape .flip-card span {
+  font-size: 110px;
 }
 
-.landscape .flip-bottom span,
+.landscape .flip-bottom-static span,
 .landscape .flip-bottom-anim span {
-  transform: translateY(-59px);
+  transform: translateX(-50%) translateY(-76px);
 }
 
 .landscape .flipclock-digits {
   gap: 16px;
 }
 
-/* ── Mobile: slightly smaller ── */
+/* ── Mobile ── */
 @media (max-width: 480px) {
   .flip-digit {
-    width: 68px;
-    height: 100px;
+    width: 64px;
+    height: 88px;
   }
-  .flip-top span,
-  .flip-bottom span,
-  .flip-top-anim span,
+
+  .flip-card span {
+    font-size: 64px;
+  }
+
+  .flip-bottom-static span,
   .flip-bottom-anim span {
-    font-size: 72px;
+    transform: translateX(-50%) translateY(-44px);
   }
-  .flip-bottom span,
-  .flip-bottom-anim span {
-    transform: translateY(-36px);
-  }
+
   .flipclock-digits {
     gap: 8px;
   }
+
   .flip-pair {
     gap: 4px;
   }
