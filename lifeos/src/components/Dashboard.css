@@ -8,11 +8,18 @@
   margin-bottom: 24px;
 }
 
+/* NEW: header row holds date + clock side by side */
+.dash-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
 .dash-date {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 8px;
 }
 
 .dash-dayname {
@@ -48,6 +55,46 @@
   font-size: 11px;
   color: var(--text-dim);
   letter-spacing: 0.05em;
+}
+
+/* ── Live clock widget ── */
+.live-clock {
+  display: flex;
+  align-items: center;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 8px;
+  padding: 5px 10px;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+  outline: none;
+}
+
+.live-clock:hover {
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(0,217,255,0.3);
+}
+
+.live-clock:active {
+  transform: scale(0.97);
+}
+
+.live-clock-time {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: 0.05em;
+}
+
+.live-clock-sep {
+  color: var(--text-dim);
+  margin: 0 1px;
+}
+
+.live-clock-sep--dim {
+  font-size: 11px;
+  opacity: 0.5;
 }
 
 /* Progress */
