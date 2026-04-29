@@ -167,7 +167,7 @@ RULES:
         <div className="coach-title-row">
           <span className="aria-status-dot" />
           <span className="coach-name">ARIA</span>
-          <span className="coach-role">EXECUTION SYSTEM</span>
+          <span className="coach-role">SHUBHOs PERSONAL ASSISTANT</span>
 
           <button
             className="clear-chat-btn"
