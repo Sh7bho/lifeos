@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './FlipClock.css';
 
-function FlipDigit({ value, prevValue }) {
+function FlipDigit({ value }) {
   const [flipping, setFlipping] = useState(false);
   const prevRef = useRef(value);
+  const [displayPrev, setDisplayPrev] = useState(value);
 
   useEffect(() => {
     if (value !== prevRef.current) {
+      setDisplayPrev(prevRef.current);
       setFlipping(true);
       const t = setTimeout(() => {
         setFlipping(false);
@@ -16,27 +18,26 @@ function FlipDigit({ value, prevValue }) {
     }
   }, [value]);
 
-  const prev = prevRef.current;
-
   return (
-    <div className={`flip-digit ${flipping ? 'flipping' : ''}`}>
-      {/* Static top half showing current */}
-      <div className="flip-top">
+    <div className="flip-digit">
+      {/* Static: top half shows current value */}
+      <div className="flip-card flip-top-static">
         <span>{value}</span>
       </div>
-      {/* Static bottom half showing current */}
-      <div className="flip-bottom">
+      {/* Static: bottom half shows current value */}
+      <div className="flip-card flip-bottom-static">
         <span>{value}</span>
       </div>
-      {/* Animated top flap (shows prev, folds down) */}
+
+      {/* Animated flap: top (shows prev, folds away) */}
       {flipping && (
-        <div className="flip-top-anim">
-          <span>{prev}</span>
+        <div className="flip-card flip-top-anim" key={`top-${value}`}>
+          <span>{displayPrev}</span>
         </div>
       )}
-      {/* Animated bottom flap (shows new, revealed) */}
+      {/* Animated flap: bottom (shows new, unfolds in) */}
       {flipping && (
-        <div className="flip-bottom-anim">
+        <div className="flip-card flip-bottom-anim" key={`bot-${value}`}>
           <span>{value}</span>
         </div>
       )}
@@ -45,12 +46,11 @@ function FlipDigit({ value, prevValue }) {
 }
 
 function FlipPair({ value }) {
-  const d1 = String(value).padStart(2, '0')[0];
-  const d2 = String(value).padStart(2, '0')[1];
+  const str = String(value).padStart(2, '0');
   return (
     <div className="flip-pair">
-      <FlipDigit value={d1} />
-      <FlipDigit value={d2} />
+      <FlipDigit value={str[0]} />
+      <FlipDigit value={str[1]} />
     </div>
   );
 }
@@ -78,7 +78,6 @@ export default function FlipClock({ onClose }) {
     };
   }, []);
 
-  // Lock body scroll
   useEffect(() => {
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = ''; };
@@ -94,12 +93,15 @@ export default function FlipClock({ onClose }) {
   const dateStr = `${String(time.getDate()).padStart(2,'0')}/${months[time.getMonth()]}/${String(time.getFullYear()).slice(2)}`;
 
   return (
-    <div className={`flipclock-overlay ${isLandscape ? 'landscape' : 'portrait'}`} onClick={onClose}>
+    <div
+      className={`flipclock-overlay ${isLandscape ? 'landscape' : 'portrait'}`}
+      onClick={onClose}
+    >
       <div className="flipclock-inner" onClick={e => e.stopPropagation()}>
 
-        <div className="flipclock-meta top">
+        <div className="flipclock-meta">
           <span className="fc-date">{dateStr}</span>
-          <span className="fc-day">{dayName}</span>
+          <span className="fc-day">{dayName.toUpperCase()}</span>
         </div>
 
         <div className="flipclock-digits">
@@ -116,7 +118,7 @@ export default function FlipClock({ onClose }) {
           <FlipPair value={s} />
         </div>
 
-        <div className="flipclock-meta bottom">
+        <div className="flipclock-hint">
           <span className="fc-hint">tap outside to close</span>
         </div>
       </div>
