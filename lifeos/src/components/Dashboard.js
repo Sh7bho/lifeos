@@ -40,7 +40,7 @@ function getGreeting(hour, name) {
   return { text: `Night mode, ${name} 🌙`, sub: 'Rest is part of the grind.' };
 }
 
-export default function Dashboard({ onNavigate }) {
+export default function Dashboard({ onNavigate, onRefresh }) {
   const [todayLogs, setTodayLogs] = useState([]);
   const [streaks, setStreaks] = useState({});
   const [briefing, setBriefing] = useState('');
@@ -50,29 +50,22 @@ export default function Dashboard({ onNavigate }) {
 
   const now = new Date();
   const hour = now.getHours();
-
   const { text: greetingText, sub: greetingSub } = getGreeting(hour, 'Shubho');
-
   const days = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
   const dayName = days[now.getDay()];
   const dateStr = now.toLocaleDateString('en-IN', { day: 'numeric', month: 'long' });
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  useEffect(() => { loadData(); }, []);
 
-  async function loadData() {
+  async function loadData(forceNewBriefing = false) {
     try {
       const [logs, streakData, existingBriefing, recentLogs] = await Promise.all([
-        getTodayLogs(),
-        getStreaks(),
-        getTodayBriefing(),
-        getRecentLogs(7),
+        getTodayLogs(), getStreaks(), getTodayBriefing(), getRecentLogs(7),
       ]);
       setTodayLogs(logs);
       setStreaks(streakData);
 
-      if (existingBriefing) {
+      if (existingBriefing && !forceNewBriefing) {
         setBriefing(existingBriefing.content);
       } else {
         generateBriefing(streakData, logs, recentLogs);
@@ -97,22 +90,24 @@ export default function Dashboard({ onNavigate }) {
     }
   }
 
+  // Called when user returns from logging — refresh data + new briefing
+  async function handleRefreshAfterLog() {
+    setLoading(true);
+    await loadData(true);
+  }
+
   const doneCount = todayLogs.length;
   const totalHabits = HABITS.length;
   const pct = Math.round((doneCount / totalHabits) * 100);
 
   if (loading) return (
-    <div className="page dash-loading">
-      <div className="spinner" />
-    </div>
+    <div className="page dash-loading"><div className="spinner" /></div>
   );
 
   return (
     <>
       {showFlipClock && <FlipClock onClose={() => setShowFlipClock(false)} />}
-
       <div className="page">
-        {/* Header */}
         <div className="dash-header animate-fadeup">
           <div className="dash-header-row">
             <div className="dash-date">
@@ -125,7 +120,6 @@ export default function Dashboard({ onNavigate }) {
           <div className="dash-tagline">{greetingSub}</div>
         </div>
 
-        {/* Progress ring */}
         <div className="dash-progress-wrap animate-fadeup-1">
           <div className="progress-ring-container">
             <svg viewBox="0 0 100 100" className="progress-ring">
@@ -155,7 +149,6 @@ export default function Dashboard({ onNavigate }) {
           </div>
         </div>
 
-        {/* Habit streaks */}
         <div className="card animate-fadeup-2">
           <div className="card-label">STREAKS</div>
           <div className="streak-grid">
@@ -170,11 +163,16 @@ export default function Dashboard({ onNavigate }) {
           </div>
         </div>
 
-        {/* ARIA Briefing */}
         <div className="card aria-card animate-fadeup-3">
           <div className="aria-header">
             <span className="aria-dot" />
             <span className="card-label">ARIA — DAILY BRIEFING</span>
+            <button
+              className="briefing-refresh-btn"
+              onClick={() => loadData(true)}
+              disabled={briefingLoading}
+              title="Refresh briefing"
+            >↺</button>
           </div>
           {briefingLoading ? (
             <div className="aria-loading">
