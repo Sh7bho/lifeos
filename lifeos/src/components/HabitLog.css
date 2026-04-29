@@ -1,0 +1,144 @@
+.habit-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.habit-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 20px 12px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.habit-tile::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--accent);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.habit-tile--selected {
+  border-color: var(--accent);
+  transform: scale(0.97);
+}
+
+.habit-tile--selected::before { opacity: 0.12; }
+
+.habit-tile--logged {
+  border-color: var(--accent);
+}
+
+.habit-tile--logged::before { opacity: 0.06; }
+
+.habit-tile--saved .habit-tile-icon {
+  color: var(--accent);
+}
+
+.habit-tile:active { transform: scale(0.94); }
+
+.habit-tile-icon {
+  font-size: 28px;
+  position: relative;
+  z-index: 1;
+  transition: transform 0.2s ease;
+}
+
+.habit-tile--selected .habit-tile-icon { transform: scale(1.15); }
+
+.habit-tile-label {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  position: relative;
+  z-index: 1;
+}
+
+.habit-tile-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  font-family: var(--font-mono);
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  border: 1px solid var(--accent);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+/* Log form */
+.log-form {
+  margin-bottom: 16px;
+}
+
+.log-form-title {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 800;
+  margin-bottom: 16px;
+  letter-spacing: -0.3px;
+}
+
+.log-field {
+  margin-bottom: 14px;
+}
+
+.log-label {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+}
+
+.log-input {
+  width: 100%;
+  padding: 12px 16px;
+  background: var(--surface3);
+  border: 1px solid var(--border-bright);
+  border-radius: 10px;
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 15px;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.log-input:focus {
+  border-color: var(--accent-cyan);
+}
+
+.log-input::placeholder { color: var(--text-muted); }
+
+.log-save-btn {
+  width: 100%;
+  margin-top: 4px;
+  padding: 14px;
+  font-size: 13px;
+  letter-spacing: 0.1em;
+  border-radius: 12px;
+}
+
+.done-btn {
+  width: 100%;
+  margin-top: 4px;
+  font-size: 12px;
+  letter-spacing: 0.1em;
+}

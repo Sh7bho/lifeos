@@ -1,0 +1,158 @@
+import React, { useState, useEffect } from 'react';
+import { getTodayLogs, getStreaks, getRecentLogs, getTodayBriefing, saveAIBriefing, HABITS } from '../lib/supabase';
+import { generateDailyBriefing } from '../lib/groq';
+import './Dashboard.css';
+
+function StreakBadge({ habit, streak, logged }) {
+  return (
+    <div className={`streak-badge ${logged ? 'streak-badge--done' : ''}`} style={{ '--accent': habit.color }}>
+      <span className="streak-icon">{habit.icon}</span>
+      <span className="streak-label">{habit.label}</span>
+      <span className="streak-count">{streak}d</span>
+      {logged && <span className="streak-check">✓</span>}
+    </div>
+  );
+}
+
+export default function Dashboard({ onNavigate }) {
+  const [todayLogs, setTodayLogs] = useState([]);
+  const [streaks, setStreaks] = useState({});
+  const [briefing, setBriefing] = useState('');
+  const [briefingLoading, setBriefingLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const now = new Date();
+  const hour = now.getHours();
+  const greeting = hour < 12 ? 'GOOD MORNING' : hour < 17 ? 'GOOD AFTERNOON' : 'GOOD EVENING';
+
+  const days = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
+  const dayName = days[now.getDay()];
+  const dateStr = now.toLocaleDateString('en-IN', { day: 'numeric', month: 'long' });
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  async function loadData() {
+    try {
+      const [logs, streakData, existingBriefing, recentLogs] = await Promise.all([
+        getTodayLogs(),
+        getStreaks(),
+        getTodayBriefing(),
+        getRecentLogs(7),
+      ]);
+      setTodayLogs(logs);
+      setStreaks(streakData);
+
+      if (existingBriefing) {
+        setBriefing(existingBriefing.content);
+      } else {
+        generateBriefing(streakData, logs, recentLogs);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function generateBriefing(streakData, logs, recentLogs) {
+    setBriefingLoading(true);
+    try {
+      const content = await generateDailyBriefing(streakData, logs, recentLogs, HABITS);
+      setBriefing(content);
+      await saveAIBriefing(content);
+    } catch (err) {
+      setBriefing('ARIA offline. Log your habits and check back later.');
+    } finally {
+      setBriefingLoading(false);
+    }
+  }
+
+  const doneCount = todayLogs.length;
+  const totalHabits = HABITS.length;
+  const pct = Math.round((doneCount / totalHabits) * 100);
+
+  if (loading) return (
+    <div className="page dash-loading">
+      <div className="spinner" />
+    </div>
+  );
+
+  return (
+    <div className="page">
+      {/* Header */}
+      <div className="dash-header animate-fadeup">
+        <div className="dash-date">
+          <span className="dash-dayname">{dayName}</span>
+          <span className="dash-datestr">{dateStr}</span>
+        </div>
+        <div className="dash-greeting">{greeting}</div>
+        <div className="dash-tagline">Your command center is live.</div>
+      </div>
+
+      {/* Progress ring */}
+      <div className="dash-progress-wrap animate-fadeup-1">
+        <div className="progress-ring-container">
+          <svg viewBox="0 0 100 100" className="progress-ring">
+            <circle cx="50" cy="50" r="40" className="ring-bg" />
+            <circle
+              cx="50" cy="50" r="40"
+              className="ring-fill"
+              strokeDasharray={`${2 * Math.PI * 40}`}
+              strokeDashoffset={`${2 * Math.PI * 40 * (1 - pct / 100)}`}
+            />
+          </svg>
+          <div className="progress-inner">
+            <span className="progress-pct">{pct}<span className="progress-sym">%</span></span>
+            <span className="progress-sub">{doneCount}/{totalHabits} done</span>
+          </div>
+        </div>
+        <div className="progress-label">
+          <div className="progress-title">TODAY'S MISSION</div>
+          <div className="progress-hint">
+            {doneCount === totalHabits
+              ? '🔥 Full send. All habits complete.'
+              : `${totalHabits - doneCount} habit${totalHabits - doneCount > 1 ? 's' : ''} left to lock in.`}
+          </div>
+          <button className="btn btn-primary log-now-btn" onClick={() => onNavigate('log')}>
+            LOG NOW →
+          </button>
+        </div>
+      </div>
+
+      {/* Habit streaks */}
+      <div className="card animate-fadeup-2">
+        <div className="card-label">STREAKS</div>
+        <div className="streak-grid">
+          {HABITS.map(h => (
+            <StreakBadge
+              key={h.id}
+              habit={h}
+              streak={streaks[h.id] || 0}
+              logged={todayLogs.some(l => l.habit_id === h.id)}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* ARIA Briefing */}
+      <div className="card aria-card animate-fadeup-3">
+        <div className="aria-header">
+          <span className="aria-dot" />
+          <span className="card-label">ARIA — DAILY BRIEFING</span>
+        </div>
+        {briefingLoading ? (
+          <div className="aria-loading">
+            <div className="spinner" />
+            <span>ARIA is reading your stats...</span>
+          </div>
+        ) : (
+          <p className="aria-text">{briefing}</p>
+        )}
+        <button className="btn btn-ghost aria-chat-btn" onClick={() => onNavigate('coach')}>
+          TALK TO ARIA →
+        </button>
+      </div>
+    </div>
+  );
+}

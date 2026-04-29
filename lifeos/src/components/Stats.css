@@ -1,0 +1,185 @@
+.stats-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stat-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.stat-box {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px 10px;
+  text-align: center;
+}
+
+.stat-num {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.stat-lbl {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  color: var(--text-dim);
+}
+
+/* Week grid */
+.week-labels {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  margin-bottom: 8px;
+}
+
+.week-labels {
+  display: flex;
+  gap: 0;
+  padding-left: 38px;
+  margin-bottom: 8px;
+}
+
+.week-label {
+  flex: 1;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+}
+
+.week-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.week-habit-icon { font-size: 18px; width: 28px; text-align: center; }
+
+.week-dots {
+  display: flex;
+  flex: 1;
+  gap: 0;
+}
+
+.week-dot {
+  flex: 1;
+  height: 28px;
+  background: var(--surface3);
+  border-radius: 6px;
+  margin: 0 2px;
+  transition: all 0.2s ease;
+  border: 1px solid var(--border);
+}
+
+.week-dot--done {
+  background: color-mix(in srgb, var(--accent) 30%, var(--surface3));
+  border-color: var(--accent);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
+/* Habit breakdown */
+.habit-stat-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.habit-stat-row:last-child { margin-bottom: 0; }
+
+.habit-stat-icon { font-size: 20px; margin-top: 2px; width: 24px; }
+
+.habit-stat-info { flex: 1; }
+
+.habit-stat-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.habit-stat-name {
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.habit-stat-pct {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.habit-stat-bar-bg {
+  height: 4px;
+  background: var(--surface3);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+
+.habit-stat-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.8s ease;
+}
+
+.habit-stat-meta {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-dim);
+  letter-spacing: 0.05em;
+}
+
+/* Heatmap */
+.heatmap-grid {
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.hm-cell {
+  aspect-ratio: 1;
+  border-radius: 3px;
+  background: var(--surface3);
+  border: 1px solid var(--border);
+}
+
+.hm-intensity-0 { background: var(--surface3); }
+.hm-intensity-1 { background: rgba(255,107,53,0.25); border-color: rgba(255,107,53,0.3); }
+.hm-intensity-2 { background: rgba(255,107,53,0.5); border-color: rgba(255,107,53,0.5); }
+.hm-intensity-3 { background: rgba(255,107,53,0.85); border-color: rgba(255,107,53,0.7); box-shadow: 0 0 6px rgba(255,107,53,0.4); }
+
+.hm-legend {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+.hm-legend-lbl {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--text-dim);
+  letter-spacing: 0.08em;
+}
+
+.hm-legend .hm-cell {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+}
