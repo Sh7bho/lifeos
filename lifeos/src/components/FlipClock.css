@@ -25,7 +25,7 @@
   padding: 20px;
 }
 
-/* ── Meta row ── */
+/* ── Meta ── */
 .flipclock-meta {
   display: flex;
   align-items: center;
@@ -40,13 +40,8 @@
   letter-spacing: 0.14em;
 }
 
-.fc-date {
-  font-weight: 500;
-}
-
-.fc-day {
-  font-weight: 700;
-}
+.fc-date { font-weight: 500; }
+.fc-day { font-weight: 700; }
 
 .flipclock-hint {
   margin-top: -8px;
@@ -59,7 +54,7 @@
   letter-spacing: 0.1em;
 }
 
-/* ── Digits row ── */
+/* ── Digits ── */
 .flipclock-digits {
   display: flex;
   align-items: center;
@@ -84,35 +79,35 @@
 /* ── Pair ── */
 .flip-pair {
   display: flex;
-  gap: 6px;
+  gap: 8px;
 }
 
-/* ── Single digit card ── */
+/* ── Digit card ── */
 .flip-digit {
   position: relative;
-  width: 80px;
-  height: 96px;
-  border-radius: 10px;
-  background: #111;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.8);
-  perspective: 400px;
+  width: 86px;
+  height: 120px;
+  border-radius: 12px;
+  background: linear-gradient(to right, #161616, #1d1d1d, #141414);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.75);
+  perspective: 500px;
   overflow: hidden;
 }
 
-/* Center divider line */
+/* Divider */
 .flip-digit::after {
   content: '';
   position: absolute;
   left: 0;
   right: 0;
-  top: calc(50% - 1px);
+  top: 50%;
   height: 2px;
-  background: #000;
-  z-index: 30;
-  pointer-events: none;
+  transform: translateY(-1px);
+  background: rgba(0,0,0,0.9);
+  z-index: 50;
 }
 
-/* ── Shared card half styles ── */
+/* Shared half */
 .flip-card {
   position: absolute;
   left: 0;
@@ -124,73 +119,69 @@
   backface-visibility: hidden;
 }
 
-/* DIGIT FIX */
+/* PERFECT CENTER FIX */
 .flip-card span {
-  font-family: 'SF Pro Display', -apple-system, 'Helvetica Neue', sans-serif;
-  font-size: 68px;
+  font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+  font-size: 120px;
   font-weight: 700;
-  color: #c8c8c8;
-  line-height: 0.82;
-  letter-spacing: -2px;
-  user-select: none;
+  color: #d2d2d2;
+  line-height: 1;
+  letter-spacing: -4px;
   position: absolute;
   left: 50%;
-  transform: translateX(-50%);
-  will-change: transform;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  user-select: none;
 }
 
-/* ── Top half ── */
+/* ── Top static ── */
 .flip-top-static {
   top: 0;
-  background: #1c1c1c;
-  border-radius: 10px 10px 0 0;
-  align-items: flex-end;
+  background: rgba(255,255,255,0.03);
+  border-radius: 12px 12px 0 0;
 }
 
 .flip-top-static span {
-  bottom: -6px;
+  top: 100%;
 }
 
-/* ── Bottom half ── */
+/* ── Bottom static ── */
 .flip-bottom-static {
   bottom: 0;
-  background: #161616;
-  border-radius: 0 0 10px 10px;
-  align-items: flex-start;
+  background: rgba(0,0,0,0.18);
+  border-radius: 0 0 12px 12px;
 }
 
 .flip-bottom-static span {
-  top: -48px;
+  top: 0%;
 }
 
-/* ── Animated top flap ── */
+/* ── Animated top ── */
 .flip-top-anim {
   top: 0;
-  background: #1c1c1c;
-  border-radius: 10px 10px 0 0;
+  background: rgba(255,255,255,0.03);
+  border-radius: 12px 12px 0 0;
   transform-origin: bottom center;
   animation: flipTopAway 0.45s cubic-bezier(0.45, 0, 0.55, 1) forwards;
   z-index: 20;
-  align-items: flex-end;
 }
 
 .flip-top-anim span {
-  bottom: -6px;
+  top: 100%;
 }
 
-/* ── Animated bottom flap ── */
+/* ── Animated bottom ── */
 .flip-bottom-anim {
   bottom: 0;
-  background: #161616;
-  border-radius: 0 0 10px 10px;
+  background: rgba(0,0,0,0.18);
+  border-radius: 0 0 12px 12px;
   transform-origin: top center;
   animation: flipBottomIn 0.45s cubic-bezier(0.45, 0, 0.55, 1) forwards;
   z-index: 19;
-  align-items: flex-start;
 }
 
 .flip-bottom-anim span {
-  top: -48px;
+  top: 0%;
 }
 
 /* ── Animations ── */
@@ -206,49 +197,24 @@
 
 /* ── Landscape ── */
 .landscape .flip-digit {
-  width: 110px;
-  height: 132px;
+  width: 108px;
+  height: 150px;
 }
 
 .landscape .flip-card span {
-  font-size: 92px;
-  line-height: 0.84;
-}
-
-.landscape .flip-top-static span,
-.landscape .flip-top-anim span {
-  bottom: -8px;
-}
-
-.landscape .flip-bottom-static span,
-.landscape .flip-bottom-anim span {
-  top: -66px;
-}
-
-.landscape .flipclock-digits {
-  gap: 16px;
+  font-size: 150px;
 }
 
 /* ── Mobile ── */
 @media (max-width: 480px) {
   .flip-digit {
-    width: 64px;
-    height: 78px;
+    width: 62px;
+    height: 88px;
   }
 
   .flip-card span {
-    font-size: 54px;
-    line-height: 0.84;
-  }
-
-  .flip-top-static span,
-  .flip-top-anim span {
-    bottom: -4px;
-  }
-
-  .flip-bottom-static span,
-  .flip-bottom-anim span {
-    top: -38px;
+    font-size: 86px;
+    letter-spacing: -2px;
   }
 
   .flipclock-digits {
@@ -257,5 +223,14 @@
 
   .flip-pair {
     gap: 4px;
+  }
+
+  .flip-sep {
+    gap: 8px;
+  }
+
+  .sep-dot {
+    width: 5px;
+    height: 5px;
   }
 }
