@@ -59,13 +59,25 @@ function App() {
           style={{ '--gp-color': playerState.currentTrack.color }}
           onClick={() => setView('music')}
         >
+          <div className="gp-glow" />
+          {playerState.currentTrack.thumb
+            ? <img src={playerState.currentTrack.thumb} alt="" className="gp-thumb" />
+            : <div className="gp-thumb gp-thumb--audio">🎵</div>
+          }
           <div className="gp-info">
-            <img src={playerState.currentTrack.thumb} alt="" className="gp-thumb" />
-            <span className="gp-title">{playerState.currentTrack.title}</span>
+            <div className="gp-text">
+              <span className="gp-title">{playerState.currentTrack.title}</span>
+              <span className="gp-artist">{playerState.currentTrack.artist}</span>
+            </div>
           </div>
+          {playerState.playing && (
+            <div className="gp-eq">
+              {[1,2,3].map(i => <div key={i} className="gp-eq-bar" style={{ '--c': playerState.currentTrack.color, animationDelay: `${i*0.15}s` }} />)}
+            </div>
+          )}
           <button
             className="gp-play"
-            style={{ color: playerState.currentTrack.color }}
+            style={{ background: playerState.currentTrack.color, color: '#000' }}
             onClick={e => { e.stopPropagation(); handlePlayerChange({ playing: !playerState.playing }); }}
           >
             {playerState.playing ? '⏸' : '▶'}
