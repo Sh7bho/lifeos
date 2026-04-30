@@ -24,15 +24,27 @@ export default function AICoach() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [context, setContext] = useState(null);
-  const [isNewChat, setIsNewChat] = useState(
-    () => sessionStorage.getItem('aria_new_chat') === 'true'
-  );
+
+  // useRef instead of useState — tracks whether THIS session is a "new chat"
+  // without triggering re-renders, and is NOT tied to sessionStorage persistence.
+  const isNewChatRef = useRef(false);
+
   const bottomRef = useRef(null);
 
   useEffect(() => {
     loadContext();
-    const newChat = sessionStorage.getItem('aria_new_chat') === 'true';
-    if (!newChat) {
+
+    // Read the flag ONCE on mount, then immediately clear it.
+    // This way a tab switch or component remount won't re-trigger "new chat" mode.
+    const newChatFlagSet = sessionStorage.getItem('aria_new_chat') === 'true';
+    sessionStorage.removeItem('aria_new_chat'); // ← clear immediately after reading
+
+    if (newChatFlagSet) {
+      // User explicitly clicked "New Chat" before this mount — stay empty.
+      isNewChatRef.current = true;
+    } else {
+      // Normal mount (tab switch, refresh, navigation) — restore history.
+      isNewChatRef.current = false;
       getChatHistory(20)
         .then(data => setMessages(data || []))
         .catch(console.error);
@@ -58,7 +70,10 @@ export default function AICoach() {
 
   function clearChat() {
     setMessages([]);
-    setIsNewChat(true);
+    isNewChatRef.current = true;
+    // Set the flag in sessionStorage so if the component remounts immediately
+    // (e.g. React StrictMode double-invoke), it still respects the new chat intent.
+    // It will be cleared on the very next mount.
     sessionStorage.setItem('aria_new_chat', 'true');
   }
 
@@ -78,8 +93,8 @@ Never sound generic, robotic, or soft. Prioritize discipline, execution, wealth-
     setLoading(true);
 
     try {
-      const newChat = sessionStorage.getItem('aria_new_chat') === 'true';
-      if (!newChat) await saveMessage('user', cleanText);
+      // Read from the ref — single source of truth, no sessionStorage re-reads
+      if (!isNewChatRef.current) await saveMessage('user', cleanText);
 
       const history = [...messages, userMsg]
         .slice(-10)
@@ -92,7 +107,7 @@ Never sound generic, robotic, or soft. Prioritize discipline, execution, wealth-
         time: getCurrentTime(),
       };
       setMessages(prev => [...prev, assistantMsg]);
-      if (!newChat) await saveMessage('assistant', assistantMsg.content);
+      if (!isNewChatRef.current) await saveMessage('assistant', assistantMsg.content);
     } catch (err) {
       console.error(err);
       setMessages(prev => [...prev, {
