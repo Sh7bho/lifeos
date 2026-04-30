@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react'; // useRef still needed for fileRef in AddTrackModal
 import { supabase } from '../lib/supabase';
 import './Music.css';
 
@@ -275,7 +275,8 @@ function AddTrackModal({ targetPlaylist, onAdd, onClose }) {
 }
 
 // ── Main Component ──
-export default function Music({ playerState, onPlayerChange }) {
+// audioRef comes from App.js where the <audio> element permanently lives
+export default function Music({ playerState, onPlayerChange, audioRef }) {
   const [tab, setTab] = useState('my');
   const [tracks, setTracks] = useState({});
   const [loadingTab, setLoadingTab] = useState({});
@@ -290,44 +291,39 @@ export default function Music({ playerState, onPlayerChange }) {
   const [queue, setQueue] = useState([]);
   const [showQueue, setShowQueue] = useState(false);
 
-  // ─────────────────────────────────────────────────────────────────
-  // THE FIX: A single <audio> element that ALWAYS lives in the DOM.
-  // We never unmount it — only change its src. This way switching
-  // tabs (or any re-render) cannot interrupt playback.
-  // ─────────────────────────────────────────────────────────────────
-  const audioRef = useRef(null);
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
 
-  // Sync src whenever the current audio track changes
-  useEffect(() => {
-    const el = audioRef.current;
-    if (!el) return;
-    const newSrc = currentTrack?.audio_url || '';
-    if (el.src !== newSrc) {
-      el.src = newSrc;
-      setProgress(0);
-      setDuration(0);
-    }
-  }, [currentTrack?.audio_url]);
-
-  // Sync play/pause
-  useEffect(() => {
-    const el = audioRef.current;
-    if (!el) return;
-    if (!currentTrack?.audio_url) { el.pause(); return; }
-    el.volume = volume / 100;
-    if (playing) el.play().catch(() => {});
-    else el.pause();
-  }, [playing, currentTrack?.audio_url]);
-
-  // Sync volume live
-  useEffect(() => {
-    if (audioRef.current) audioRef.current.volume = volume / 100;
-  }, [volume]);
-
   // Persist volume
   useEffect(() => { localStorage.setItem('musicVolume', volume); }, [volume]);
+
+  // Wire up the audio element's time/duration events (the element lives in App.js)
+  useEffect(() => {
+    const el = audioRef?.current;
+    if (!el) return;
+    const onTimeUpdate = () => { if (el.duration) setProgress((el.currentTime / el.duration) * 100); };
+    const onMeta       = () => setDuration(el.duration);
+    const onEnded      = () => {
+      setProgress(0);
+      if (playMode === 'repeat') {
+        el.currentTime = 0;
+        el.play().catch(() => {});
+        return;
+      }
+      const next = getNextTrack(1);
+      if (next) playTrack(next, getTabColor(tab));
+      else onPlayerChange({ currentTrack: null, playing: false });
+    };
+    el.addEventListener('timeupdate', onTimeUpdate);
+    el.addEventListener('loadedmetadata', onMeta);
+    el.addEventListener('ended', onEnded);
+    return () => {
+      el.removeEventListener('timeupdate', onTimeUpdate);
+      el.removeEventListener('loadedmetadata', onMeta);
+      el.removeEventListener('ended', onEnded);
+    };
+  // Re-attach when playMode or tab changes so onEnded closure is fresh
+  }, [audioRef, playMode, tab, queue]);
 
   function handleSeek(val) {
     setProgress(val);
@@ -478,31 +474,6 @@ export default function Music({ playerState, onPlayerChange }) {
 
   return (
     <div className="music-page">
-      {/* ── ALWAYS-MOUNTED audio element — the key fix ── */}
-      {/* It lives outside any conditional, so it never unmounts when tabs change */}
-      <audio
-        ref={audioRef}
-        style={{ display: 'none' }}
-        onEnded={() => {
-          setProgress(0);
-          if (playMode === 'repeat' && audioRef.current) {
-            audioRef.current.currentTime = 0;
-            audioRef.current.play().catch(() => {});
-            return;
-          }
-          const next = getNextTrack(1);
-          if (next) playTrack(next, getTabColor(tab));
-          else onPlayerChange({ currentTrack: null, playing: false });
-        }}
-        onTimeUpdate={() => {
-          const el = audioRef.current;
-          if (el && el.duration) setProgress((el.currentTime / el.duration) * 100);
-        }}
-        onLoadedMetadata={() => {
-          if (audioRef.current) setDuration(audioRef.current.duration);
-        }}
-      />
-
       <div className="music-bg-orb-1" />
       <div className="music-bg-orb-2" />
       <div className="music-bg-grain" />
