@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Dashboard from './components/Dashboard';
 import HabitLog from './components/HabitLog';
 import Stats from './components/Stats';
@@ -15,6 +15,7 @@ function App() {
 
   // Global player state — persists when switching tabs
   const [playerState, setPlayerState] = useState({ currentTrack: null, playing: false });
+  const ytRef = useRef(null);
 
   useEffect(() => {
     const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
@@ -31,6 +32,15 @@ function App() {
 
   function handlePlayerChange(changes) {
     setPlayerState(prev => ({ ...prev, ...changes }));
+    // Push volume to YouTube iframe via postMessage
+    if (changes.volume !== undefined && ytRef.current) {
+      try {
+        ytRef.current.contentWindow.postMessage(
+          JSON.stringify({ event: 'command', func: 'setVolume', args: [changes.volume] }),
+          '*'
+        );
+      } catch(e) {}
+    }
   }
 
   if (isSetup) return <Setup />;
@@ -44,8 +54,9 @@ function App() {
         <div style={{ position: 'fixed', width: 1, height: 1, overflow: 'hidden', opacity: 0, top: -999, left: -999, pointerEvents: 'none' }}>
           <iframe
             key={playerState.currentTrack.youtubeId}
-            src={`https://www.youtube.com/embed/${playerState.currentTrack.youtubeId}?autoplay=1&controls=0&modestbranding=1`}
+            src={`https://www.youtube.com/embed/${playerState.currentTrack.youtubeId}?autoplay=1&controls=0&modestbranding=1&enablejsapi=1`}
             allow="autoplay"
+            ref={ytRef}
             title="bg-player"
             style={{ width: 1, height: 1, border: 'none' }}
           />
@@ -82,24 +93,6 @@ function App() {
           >
             {playerState.playing ? '⏸' : '▶'}
           </button>
-        </div>
-      )}
-
-      {/* Tiny floating music indicator on coach — doesn't cover input */}
-      {playerState.currentTrack && view === 'coach' && (
-        <div
-          className="coach-music-chip"
-          style={{ '--gp-color': playerState.currentTrack.color }}
-          onClick={() => setView('music')}
-        >
-          <button
-            className="coach-chip-play"
-            style={{ color: playerState.currentTrack.color }}
-            onClick={e => { e.stopPropagation(); handlePlayerChange({ playing: !playerState.playing }); }}
-          >
-            {playerState.playing ? '⏸' : '▶'}
-          </button>
-          <span className="coach-chip-title">{playerState.currentTrack.title}</span>
         </div>
       )}
 
