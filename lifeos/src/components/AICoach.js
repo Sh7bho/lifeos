@@ -24,12 +24,15 @@ export default function AICoach() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [context, setContext] = useState(null);
-  const [isNewChat, setIsNewChat] = useState(false);
+  const [isNewChat, setIsNewChat] = useState(
+    () => sessionStorage.getItem('aria_new_chat') === 'true'
+  );
   const bottomRef = useRef(null);
 
   useEffect(() => {
     loadContext();
-    if (!isNewChat) {
+    const newChat = sessionStorage.getItem('aria_new_chat') === 'true';
+    if (!newChat) {
       getChatHistory(20)
         .then(data => setMessages(data || []))
         .catch(console.error);
@@ -56,6 +59,7 @@ export default function AICoach() {
   function clearChat() {
     setMessages([]);
     setIsNewChat(true);
+    sessionStorage.setItem('aria_new_chat', 'true');
   }
 
   const systemPrompt = context
@@ -74,7 +78,8 @@ Never sound generic, robotic, or soft. Prioritize discipline, execution, wealth-
     setLoading(true);
 
     try {
-      if (!isNewChat) await saveMessage('user', cleanText);
+      const newChat = sessionStorage.getItem('aria_new_chat') === 'true';
+      if (!newChat) await saveMessage('user', cleanText);
 
       const history = [...messages, userMsg]
         .slice(-10)
@@ -87,7 +92,7 @@ Never sound generic, robotic, or soft. Prioritize discipline, execution, wealth-
         time: getCurrentTime(),
       };
       setMessages(prev => [...prev, assistantMsg]);
-      if (!isNewChat) await saveMessage('assistant', assistantMsg.content);
+      if (!newChat) await saveMessage('assistant', assistantMsg.content);
     } catch (err) {
       console.error(err);
       setMessages(prev => [...prev, {
