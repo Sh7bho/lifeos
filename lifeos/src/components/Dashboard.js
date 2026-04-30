@@ -40,6 +40,55 @@ function getGreeting(hour, name) {
   return { text: `Night mode, ${name} 🌙`, sub: 'Rest is part of the grind.' };
 }
 
+/**
+ * Checks whether a → action line has been completed.
+ * Matches any HABIT label appearing in the line text (case-insensitive).
+ */
+function isActionDone(line, todayLogs) {
+  const lower = line.toLowerCase();
+  return HABITS.some(h => {
+    if (!lower.includes(h.label.toLowerCase())) return false;
+    return todayLogs.some(l => l.habit_id === h.id);
+  });
+}
+
+/**
+ * Renders the briefing text with smart → action lines.
+ * Action lines that mention a logged habit get a strikethrough + ✓ badge.
+ * Plain text lines render normally.
+ */
+function BriefingText({ text, todayLogs }) {
+  if (!text) return null;
+
+  const lines = text.split('\n');
+
+  return (
+    <div className="aria-text">
+      {lines.map((line, i) => {
+        const isAction = line.trimStart().startsWith('→');
+        if (!isAction) {
+          return (
+            <p key={i} className="briefing-line briefing-line--plain">
+              {line}
+            </p>
+          );
+        }
+
+        const done = isActionDone(line, todayLogs);
+        return (
+          <div key={i} className={`briefing-action ${done ? 'briefing-action--done' : ''}`}>
+            <span className="briefing-arrow">→</span>
+            <span className="briefing-action-text">
+              {line.replace(/^→\s*/, '')}
+            </span>
+            {done && <span className="briefing-done-badge">✓ DONE</span>}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function Dashboard({ onNavigate, onRefresh }) {
   const [todayLogs, setTodayLogs] = useState([]);
   const [streaks, setStreaks] = useState({});
@@ -90,10 +139,15 @@ export default function Dashboard({ onNavigate, onRefresh }) {
     }
   }
 
-  // Called when user returns from logging — refresh data + new briefing
+  // Called when user returns from logging — refresh logs only (keep today's briefing text)
   async function handleRefreshAfterLog() {
-    setLoading(true);
-    await loadData(true);
+    try {
+      const [logs, streakData] = await Promise.all([getTodayLogs(), getStreaks()]);
+      setTodayLogs(logs);
+      setStreaks(streakData);
+    } catch (err) {
+      console.error(err);
+    }
   }
 
   const doneCount = todayLogs.length;
@@ -180,7 +234,7 @@ export default function Dashboard({ onNavigate, onRefresh }) {
               <span>ARIA is reading your stats...</span>
             </div>
           ) : (
-            <p className="aria-text">{briefing}</p>
+            <BriefingText text={briefing} todayLogs={todayLogs} />
           )}
           <button className="btn btn-ghost aria-chat-btn" onClick={() => onNavigate('coach')}>
             TALK TO ARIA →
