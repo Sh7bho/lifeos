@@ -13,9 +13,11 @@ function App() {
   const [isSetup, setIsSetup] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
-  // Global player state — persists when switching tabs
   const [playerState, setPlayerState] = useState({ currentTrack: null, playing: false });
   const ytRef = useRef(null);
+
+  // ── THE FIX: audio lives here in App, never unmounts ──
+  const audioRef = useRef(null);
 
   useEffect(() => {
     const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
@@ -25,6 +27,32 @@ function App() {
     }
   }, []);
 
+  // Sync audio src when track changes
+  useEffect(() => {
+    const el = audioRef.current;
+    if (!el) return;
+    const newSrc = playerState.currentTrack?.audio_url || '';
+    if (el.src !== newSrc) {
+      el.src = newSrc;
+    }
+  }, [playerState.currentTrack?.audio_url]);
+
+  // Sync play/pause
+  useEffect(() => {
+    const el = audioRef.current;
+    if (!el) return;
+    if (!playerState.currentTrack?.audio_url) { el.pause(); return; }
+    if (playerState.playing) el.play().catch(() => {});
+    else el.pause();
+  }, [playerState.playing, playerState.currentTrack?.audio_url]);
+
+  // Sync volume
+  useEffect(() => {
+    if (audioRef.current && playerState.volume !== undefined) {
+      audioRef.current.volume = playerState.volume / 100;
+    }
+  }, [playerState.volume]);
+
   function handleLogDone() {
     setRefreshKey(k => k + 1);
     setView('dashboard');
@@ -32,7 +60,6 @@ function App() {
 
   function handlePlayerChange(changes) {
     setPlayerState(prev => ({ ...prev, ...changes }));
-    // Push volume to YouTube iframe via postMessage
     if (changes.volume !== undefined && ytRef.current) {
       try {
         ytRef.current.contentWindow.postMessage(
@@ -49,7 +76,14 @@ function App() {
     <div className="app">
       <div className="noise-overlay" />
 
-      {/* Hidden YouTube player — keeps playing across all views, only for YT tracks */}
+      {/* Persistent audio element for uploaded files — never unmounts */}
+      <audio
+        ref={audioRef}
+        style={{ display: 'none' }}
+        onEnded={() => handlePlayerChange({ _audioEnded: true })}
+      />
+
+      {/* Hidden YouTube player */}
       {playerState.currentTrack && playerState.playing && playerState.currentTrack.youtubeId && !playerState.currentTrack.audio_url && (
         <div style={{ position: 'fixed', width: 1, height: 1, overflow: 'hidden', opacity: 0, top: -999, left: -999, pointerEvents: 'none' }}>
           <iframe
@@ -63,35 +97,60 @@ function App() {
         </div>
       )}
 
-      {/* Mini now-playing pill — visible on all views except music tab */}
+      {/* Mini now-playing pill */}
       {playerState.currentTrack && view !== 'music' && view !== 'coach' && (
         <div
-          className="global-player-pill"
-          style={{ '--gp-color': playerState.currentTrack.color }}
+          className={`global-player-pill ${playerState.playing ? 'gp--playing' : ''}`}
+          style={{ '--gp-color': playerState.currentTrack.color || '#C8A96E' }}
           onClick={() => setView('music')}
         >
-          <div className="gp-glow" />
+          {/* Blurred bg art */}
+          {playerState.currentTrack.thumb && (
+            <div className="gp-bg-art" style={{ backgroundImage: `url(${playerState.currentTrack.thumb})` }} />
+          )}
+          <div className="gp-bg-overlay" />
+
+          {/* Top glow line */}
+          <div className="gp-glow-line" />
+
+          {/* Thumb */}
           {playerState.currentTrack.thumb
             ? <img src={playerState.currentTrack.thumb} alt="" className="gp-thumb" />
-            : <div className="gp-thumb gp-thumb--audio">🎵</div>
+            : <div className="gp-thumb gp-thumb--audio">♪</div>
           }
+
+          {/* Info + progress */}
           <div className="gp-info">
-            <div className="gp-text">
-              <span className="gp-title">{playerState.currentTrack.title}</span>
+            <div className="gp-marquee-wrap">
+              <span className={`gp-title ${playerState.currentTrack.title?.length > 22 ? 'gp-title--scroll' : ''}`}>
+                {playerState.currentTrack.title}
+              </span>
+            </div>
+            <div className="gp-meta">
+              {playerState.playing
+                ? <span className="gp-live-dot" style={{ background: playerState.currentTrack.color || '#C8A96E' }} />
+                : <span className="gp-paused-icon">⏸</span>
+              }
               <span className="gp-artist">{playerState.currentTrack.artist}</span>
             </div>
           </div>
+
+          {/* EQ bars when playing */}
           {playerState.playing && (
             <div className="gp-eq">
-              {[1,2,3].map(i => <div key={i} className="gp-eq-bar" style={{ '--c': playerState.currentTrack.color, animationDelay: `${i*0.15}s` }} />)}
+              {[1,2,3,4].map(i => (
+                <div key={i} className="gp-eq-bar" style={{ '--c': playerState.currentTrack.color || '#C8A96E', animationDelay: `${i * 0.1}s` }} />
+              ))}
             </div>
           )}
+
+          {/* Play/pause button */}
           <button
             className="gp-play"
-            style={{ background: playerState.currentTrack.color, color: '#000' }}
             onClick={e => { e.stopPropagation(); handlePlayerChange({ playing: !playerState.playing }); }}
           >
-            {playerState.playing ? '⏸' : '▶'}
+            <div className="gp-play-ring" />
+            <span className="gp-play-icon">{playerState.playing ? '⏸' : '▶'}</span>
           </button>
         </div>
       )}
@@ -101,10 +160,18 @@ function App() {
         {view === 'log' && <HabitLog onDone={handleLogDone} />}
         {view === 'stats' && <Stats />}
         {view === 'coach' && <AICoach />}
-        {view === 'music' && (
-          <Music playerState={playerState} onPlayerChange={handlePlayerChange} />
-        )}
+
+        {/* Music stays ALWAYS mounted — just hidden when not active.
+            This prevents the component (and its state) from being destroyed. */}
+        <div style={{ display: view === 'music' ? 'block' : 'none' }}>
+          <Music
+            playerState={playerState}
+            onPlayerChange={handlePlayerChange}
+            audioRef={audioRef}
+          />
+        </div>
       </div>
+
       <NavBar active={view} onNavigate={setView} playerState={playerState} />
     </div>
   );
