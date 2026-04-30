@@ -489,19 +489,21 @@ export default function Music({ playerState, onPlayerChange }) {
           <div className="np-glow-strip" />
           <div className="np-color-wash" />
 
-          {/* Seek bar spans full width at very top of bar */}
-          <div className="np-seek-row">
-            <span className="np-time">{isAudioTrack ? formatTime((progress/100)*duration) : ''}</span>
-            <input
-              type="range"
-              className="np-seek-slider"
-              min="0" max="100"
-              value={progress}
-              onChange={e => handleSeek(Number(e.target.value))}
-              style={{ '--pct': `${progress}%` }}
-            />
-            <span className="np-time">{isAudioTrack ? formatTime(duration) : ''}</span>
-          </div>
+          {/* Seek bar — only for uploaded audio files (YouTube can't be seeked via embed) */}
+          {isAudioTrack && (
+            <div className="np-seek-row">
+              <span className="np-time">{formatTime((progress/100)*duration)}</span>
+              <input
+                type="range"
+                className="np-seek-slider"
+                min="0" max="100"
+                value={progress}
+                onChange={e => handleSeek(Number(e.target.value))}
+                style={{ '--pct': `${progress}%` }}
+              />
+              <span className="np-time">{formatTime(duration)}</span>
+            </div>
+          )}
 
           {/* Main row: thumb + info + controls + volume */}
           <div className="np-main-row">
