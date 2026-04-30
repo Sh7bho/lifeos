@@ -572,7 +572,8 @@
     padding: 8px 32px 12px;
   }
   .np-main-row { gap: 20px; }
-  .np-volume-wrap { display: flex; }
+  .np-volume-slider { width: 100px; }
+  .np-volume-wrap { min-width: 130px; }
   .music-page { padding-bottom: calc(72px + 64px + 16px); } /* nav + player + gap */
 }
 
@@ -600,17 +601,17 @@
 
 /* ── Volume ── */
 .np-volume-wrap {
-  display: none; /* hidden on mobile */
+  display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   flex-shrink: 0;
-  min-width: 130px;
+  min-width: 80px;
 }
 .np-volume-icon { font-size: 14px; flex-shrink: 0; user-select: none; }
 .np-volume-slider {
   -webkit-appearance: none;
   appearance: none;
-  width: 90px;
+  width: 60px;
   height: 3px;
   border-radius: 99px;
   background: rgba(255,255,255,0.15);
