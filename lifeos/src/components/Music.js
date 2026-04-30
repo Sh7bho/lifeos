@@ -11,28 +11,7 @@ const CURATED = [
   { id: 'boss',  label: 'BOSS MINDSET',     icon: '📈', color: '#C8A96E' },
 ];
 
-const CURATED_SEED = {
-  focus: [
-    { id: 'c1', title: 'Lo-Fi Hip Hop Radio',  artist: 'Lofi Girl',      youtubeId: 'jfKfPfyJRdk', thumb: 'https://img.youtube.com/vi/jfKfPfyJRdk/mqdefault.jpg', playlist: 'focus' },
-    { id: 'c2', title: 'Dark Academia Study',  artist: 'Aesthetic Vibes', youtubeId: '7NOSDKb0HlU', thumb: 'https://img.youtube.com/vi/7NOSDKb0HlU/mqdefault.jpg', playlist: 'focus' },
-    { id: 'c3', title: 'Dark Lo-Fi Beats',     artist: 'ChillHop',        youtubeId: 'S_MOd40zlYU', thumb: 'https://img.youtube.com/vi/S_MOd40zlYU/mqdefault.jpg', playlist: 'focus' },
-  ],
-  gym: [
-    { id: 'c4', title: 'Workout Motivation',   artist: 'Various',         youtubeId: 'Y8RKTnOqOFs', thumb: 'https://img.youtube.com/vi/Y8RKTnOqOFs/mqdefault.jpg', playlist: 'gym' },
-    { id: 'c5', title: 'Hard Trap Beats',      artist: 'Trap Nation',     youtubeId: 'Q3y-80HBM6Q', thumb: 'https://img.youtube.com/vi/Q3y-80HBM6Q/mqdefault.jpg', playlist: 'gym' },
-    { id: 'c6', title: 'Beast Mode Hip Hop',   artist: 'Various',         youtubeId: 'pMRbplROKEM', thumb: 'https://img.youtube.com/vi/pMRbplROKEM/mqdefault.jpg', playlist: 'gym' },
-  ],
-  grind: [
-    { id: 'c7', title: 'Night Owl Lo-Fi',      artist: 'Lofi Girl',       youtubeId: 'rUxyKA_-grg', thumb: 'https://img.youtube.com/vi/rUxyKA_-grg/mqdefault.jpg', playlist: 'grind' },
-    { id: 'c8', title: 'Midnight Study Beats', artist: 'Various',         youtubeId: 'n61ULEU7CO0', thumb: 'https://img.youtube.com/vi/n61ULEU7CO0/mqdefault.jpg', playlist: 'grind' },
-    { id: 'c9', title: 'Chill Trap Night',     artist: 'Various',         youtubeId: 'H-aHaFMVkQU', thumb: 'https://img.youtube.com/vi/H-aHaFMVkQU/mqdefault.jpg', playlist: 'grind' },
-  ],
-  boss: [
-    { id: 'c10', title: 'Jazz & Coffee',       artist: 'Café Music',      youtubeId: 'DSGyEsJ17cI', thumb: 'https://img.youtube.com/vi/DSGyEsJ17cI/mqdefault.jpg', playlist: 'boss' },
-    { id: 'c11', title: 'Smooth Executive',    artist: 'Various',         youtubeId: 'lTRiuFIWV54', thumb: 'https://img.youtube.com/vi/lTRiuFIWV54/mqdefault.jpg', playlist: 'boss' },
-    { id: 'c12', title: 'Entrepreneur Mix',    artist: 'Various',         youtubeId: 'ZXsQAXx_ao0', thumb: 'https://img.youtube.com/vi/ZXsQAXx_ao0/mqdefault.jpg', playlist: 'boss' },
-  ],
-};
+
 
 function extractYouTubeId(url) {
   const patterns = [
@@ -430,12 +409,7 @@ export default function Music({ playerState, onPlayerChange, audioRef }) {
   useEffect(() => { ensureTabLoaded(tab); }, [tab]);
 
   function getAllTracksForTab(tabId) {
-    const dbTracks = tracks[tabId] || [];
-    if (tabId === 'my') return dbTracks;
-    const seed = CURATED_SEED[tabId] || [];
-    const seedIds = new Set(seed.map(t => t.youtubeId));
-    const userAdded = dbTracks.filter(t => !seedIds.has(t.youtube_id));
-    return [...seed, ...userAdded];
+    return tracks[tabId] || [];
   }
 
   function getTabColor(tabId) {
@@ -688,7 +662,7 @@ export default function Music({ playerState, onPlayerChange, audioRef }) {
               </div>
 
               <div className="track-row-actions">
-                {track.id && !track.id.toString().startsWith('c') && (
+                {track.id && (
                   <button className="track-delete-btn" onClick={() => handleDelete(track)}>✕</button>
                 )}
               </div>
