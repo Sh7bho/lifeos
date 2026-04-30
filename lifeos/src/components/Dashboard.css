@@ -299,3 +299,70 @@
   color: var(--accent-cyan);
   border-color: rgba(0,217,255,0.2);
 }
+
+/* ── Briefing smart renderer ── */
+.aria-text {
+  margin-bottom: 16px;
+}
+
+.briefing-line--plain {
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.7;
+  color: rgba(240,240,240,0.85);
+  margin: 0 0 6px;
+}
+
+.briefing-action {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  margin-bottom: 6px;
+  transition: background 0.25s ease, opacity 0.25s ease;
+  background: rgba(255,255,255,0.02);
+}
+
+.briefing-action--done {
+  background: rgba(0,217,255,0.05);
+  opacity: 0.55;
+}
+
+.briefing-arrow {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--accent-cyan);
+  flex-shrink: 0;
+}
+
+.briefing-action--done .briefing-arrow {
+  color: var(--text-dim);
+}
+
+.briefing-action-text {
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.6;
+  color: rgba(240,240,240,0.85);
+  flex: 1;
+  transition: text-decoration 0.2s ease;
+}
+
+.briefing-action--done .briefing-action-text {
+  text-decoration: line-through;
+  color: var(--text-dim);
+}
+
+.briefing-done-badge {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--accent-cyan);
+  background: rgba(0,217,255,0.1);
+  border: 1px solid rgba(0,217,255,0.2);
+  padding: 2px 7px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
