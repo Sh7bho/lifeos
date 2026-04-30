@@ -273,24 +273,73 @@ export default function Music({ playerState, onPlayerChange, audioRef }) {
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
 
+  // Refs so onEnded always reads fresh state — fixes stale closure bug
+  const playModeRef = useRef(playMode);
+  const queueRef = useRef(queue);
+  const currentTrackRef = useRef(currentTrack);
+  const tabRef = useRef(tab);
+  useEffect(() => { playModeRef.current = playMode; }, [playMode]);
+  useEffect(() => { queueRef.current = queue; }, [queue]);
+  useEffect(() => { currentTrackRef.current = currentTrack; }, [currentTrack]);
+  useEffect(() => { tabRef.current = tab; }, [tab]);
+
   // Persist volume
   useEffect(() => { localStorage.setItem('musicVolume', volume); }, [volume]);
+
+  // Media Session API — lock screen controls + keeps audio alive in background
+  useEffect(() => {
+    if (!('mediaSession' in navigator) || !currentTrack) return;
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: currentTrack.title || 'Unknown',
+      artist: currentTrack.artist || 'Unknown',
+      artwork: currentTrack.thumb
+        ? [{ src: currentTrack.thumb, sizes: '320x180', type: 'image/jpeg' }]
+        : [],
+    });
+    navigator.mediaSession.setActionHandler('play', () => {
+      onPlayerChange({ currentTrack: currentTrackRef.current, playing: true });
+    });
+    navigator.mediaSession.setActionHandler('pause', () => {
+      onPlayerChange({ currentTrack: currentTrackRef.current, playing: false });
+    });
+    navigator.mediaSession.setActionHandler('previoustrack', () => {
+      const next = getNextTrackFromRefs(-1);
+      if (next) playTrack(next, getTabColor(tabRef.current));
+    });
+    navigator.mediaSession.setActionHandler('nexttrack', () => {
+      const next = getNextTrackFromRefs(1);
+      if (next) playTrack(next, getTabColor(tabRef.current));
+    });
+  }, [currentTrack]);
 
   // Wire up the audio element's time/duration events (the element lives in App.js)
   useEffect(() => {
     const el = audioRef?.current;
     if (!el) return;
-    const onTimeUpdate = () => { if (el.duration) setProgress((el.currentTime / el.duration) * 100); };
-    const onMeta       = () => setDuration(el.duration);
-    const onEnded      = () => {
+    const onTimeUpdate = () => {
+      if (el.duration) {
+        setProgress((el.currentTime / el.duration) * 100);
+        if ('mediaSession' in navigator) {
+          try {
+            navigator.mediaSession.setPositionState({
+              duration: el.duration,
+              playbackRate: el.playbackRate,
+              position: el.currentTime,
+            });
+          } catch {}
+        }
+      }
+    };
+    const onMeta  = () => setDuration(el.duration);
+    const onEnded = () => {
       setProgress(0);
-      if (playMode === 'repeat') {
+      if (playModeRef.current === 'repeat') {
         el.currentTime = 0;
         el.play().catch(() => {});
         return;
       }
-      const next = getNextTrack(1);
-      if (next) playTrack(next, getTabColor(tab));
+      const next = getNextTrackFromRefs(1);
+      if (next) playTrack(next, getTabColor(tabRef.current));
       else onPlayerChange({ currentTrack: null, playing: false });
     };
     el.addEventListener('timeupdate', onTimeUpdate);
@@ -301,8 +350,7 @@ export default function Music({ playerState, onPlayerChange, audioRef }) {
       el.removeEventListener('loadedmetadata', onMeta);
       el.removeEventListener('ended', onEnded);
     };
-  // Re-attach when playMode or tab changes so onEnded closure is fresh
-  }, [audioRef, playMode, tab, queue]);
+  }, [audioRef]); // only attach once — refs keep closures fresh
 
   function handleSeek(val) {
     setProgress(val);
@@ -337,6 +385,26 @@ export default function Music({ playerState, onPlayerChange, audioRef }) {
     if (playMode === 'shuffle') return 'SHUFFLE';
     if (playMode === 'repeat')  return 'REPEAT';
     return 'QUEUE';
+  }
+
+  function getNextTrackFromRefs(dir = 1) {
+    const list = queueRef.current.length ? queueRef.current : getAllTracksForTab(tabRef.current);
+    const ct = currentTrackRef.current;
+    const mode = playModeRef.current;
+    if (!list.length) return null;
+    if (mode === 'repeat') return ct;
+    if (mode === 'shuffle') {
+      const others = list.filter(t => {
+        const ytId = t.youtubeId || t.youtube_id;
+        return !(ct && ((ytId && ct.youtubeId === ytId) || (t.audio_url && ct.audio_url === t.audio_url)));
+      });
+      return others.length ? others[Math.floor(Math.random() * others.length)] : list[0];
+    }
+    const idx = list.findIndex(t => {
+      const ytId = t.youtubeId || t.youtube_id;
+      return ct && ((ytId && ct.youtubeId === ytId) || (t.audio_url && ct.audio_url === t.audio_url));
+    });
+    return list[(idx + dir + list.length) % list.length];
   }
 
   function getNextTrack(dir = 1) {
