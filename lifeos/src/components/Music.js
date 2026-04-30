@@ -306,19 +306,67 @@ export default function Music({ playerState, onPlayerChange }) {
   const { currentTrack, playing } = playerState;
   const isAudioTrack = !!currentTrack?.audio_url;
   const [volume, setVolume] = useState(80);
+  const [playMode, setPlayMode] = useState('queue');   // 'queue' | 'shuffle' | 'repeat'
+  const [queue, setQueue] = useState([]);              // ordered play queue
+  const [showQueue, setShowQueue] = useState(false);   // queue panel visible
 
-  function skipTrack(dir) {
+  // Build queue from current tab whenever tab or tracks change
+  useEffect(() => {
     const list = getAllTracksForTab(tab);
-    if (!list.length) return;
+    setQueue(list.map((t, i) => ({ ...t, _qi: i })));
+  }, [tab, tracks]);
+
+  function cyclePlayMode() {
+    setPlayMode(m => m === 'queue' ? 'shuffle' : m === 'shuffle' ? 'repeat' : 'queue');
+  }
+
+  function playModeIcon() {
+    if (playMode === 'shuffle') return '⇄';
+    if (playMode === 'repeat')  return '↻';
+    return '≡';
+  }
+  function playModeLabel() {
+    if (playMode === 'shuffle') return 'SHUFFLE';
+    if (playMode === 'repeat')  return 'REPEAT';
+    return 'QUEUE';
+  }
+
+  function getNextTrack(dir = 1) {
+    const list = queue.length ? queue : getAllTracksForTab(tab);
+    if (!list.length) return null;
+    if (playMode === 'repeat') return currentTrack;
+    if (playMode === 'shuffle') {
+      const others = list.filter(t => {
+        const ytId = t.youtubeId || t.youtube_id;
+        return !(currentTrack && ((ytId && currentTrack.youtubeId === ytId) || (t.audio_url && currentTrack.audio_url === t.audio_url)));
+      });
+      return others.length ? others[Math.floor(Math.random() * others.length)] : list[0];
+    }
+    // queue mode
     const idx = list.findIndex(t => {
       const ytId = t.youtubeId || t.youtube_id;
-      return currentTrack && (
-        (ytId && currentTrack.youtubeId === ytId) ||
-        (t.audio_url && currentTrack.audio_url === t.audio_url)
-      );
+      return currentTrack && ((ytId && currentTrack.youtubeId === ytId) || (t.audio_url && currentTrack.audio_url === t.audio_url));
     });
     const next = (idx + dir + list.length) % list.length;
-    playTrack(list[next], getTabColor(tab));
+    return list[next];
+  }
+
+  function skipTrack(dir) {
+    const next = getNextTrack(dir);
+    if (next) playTrack(next, getTabColor(tab));
+  }
+
+  function moveInQueue(from, to) {
+    setQueue(prev => {
+      const q = [...prev];
+      const [item] = q.splice(from, 1);
+      q.splice(to, 0, item);
+      return q;
+    });
+  }
+
+  function removeFromQueue(idx) {
+    setQueue(prev => prev.filter((_, i) => i !== idx));
   }
 
   function handleVolumeChange(val) {
@@ -439,7 +487,12 @@ export default function Music({ playerState, onPlayerChange }) {
           src={currentTrack.audio_url}
           playing={playing}
           audioRef={audioRef2}
-          onEnded={() => { onPlayerChange({ playing: false }); setProgress(0); }}
+          onEnded={() => {
+              setProgress(0);
+              const next = getNextTrack(1);
+              if (next) playTrack(next, getTabColor(tab));
+              else onPlayerChange({ playing: false });
+            }}
           onTimeUpdate={(t, d) => { if (d) setProgress((t / d) * 100); }}
           onDuration={d => setDuration(d)}
         />
@@ -528,6 +581,9 @@ export default function Music({ playerState, onPlayerChange }) {
 
             {/* Controls */}
             <div className="np-controls">
+              <button className="np-mode-btn" onClick={cyclePlayMode} title={playModeLabel()} style={{ color: playMode !== 'queue' ? currentTrack.color : undefined }}>
+                {playModeIcon()}
+              </button>
               <button className="np-skip-btn" onClick={() => skipTrack(-1)} title="Previous">⏮</button>
               <button
                 className="np-play-btn"
@@ -537,6 +593,9 @@ export default function Music({ playerState, onPlayerChange }) {
                 {playing ? '⏸' : '▶'}
               </button>
               <button className="np-skip-btn" onClick={() => skipTrack(1)} title="Next">⏭</button>
+              <button className="np-queue-btn" onClick={() => setShowQueue(q => !q)} title="Queue" style={{ color: showQueue ? currentTrack.color : undefined }}>
+                ☰
+              </button>
             </div>
 
             {/* Volume — desktop only */}
@@ -550,6 +609,56 @@ export default function Music({ playerState, onPlayerChange }) {
                 onChange={e => handleVolumeChange(Number(e.target.value))}
               />
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Queue Panel */}
+      {showQueue && currentTrack && (
+        <div className="queue-panel animate-fadeup">
+          <div className="queue-header">
+            <span className="queue-title">QUEUE</span>
+            <div className="queue-mode-tabs">
+              {['queue','shuffle','repeat'].map(m => (
+                <button
+                  key={m}
+                  className={`queue-mode-tab ${playMode === m ? 'queue-mode-tab--active' : ''}`}
+                  style={{ '--qc': currentTrack.color }}
+                  onClick={() => setPlayMode(m)}
+                >
+                  {m === 'queue' ? '≡ QUEUE' : m === 'shuffle' ? '⇄ SHUFFLE' : '↻ REPEAT'}
+                </button>
+              ))}
+            </div>
+            <button className="queue-close" onClick={() => setShowQueue(false)}>✕</button>
+          </div>
+
+          <div className="queue-list">
+            {queue.map((t, i) => {
+              const ytId = t.youtubeId || t.youtube_id;
+              const isActive = currentTrack && (
+                (ytId && currentTrack.youtubeId === ytId) ||
+                (t.audio_url && currentTrack.audio_url === t.audio_url)
+              );
+              return (
+                <div key={t.id || i} className={`queue-item ${isActive ? 'queue-item--active' : ''}`} style={{ '--qc': currentTrack.color }}>
+                  <span className="queue-num">{isActive ? '▶' : i + 1}</span>
+                  {t.thumb
+                    ? <img src={t.thumb} alt="" className="queue-thumb" />
+                    : <div className="queue-thumb queue-thumb--audio">🎵</div>
+                  }
+                  <div className="queue-info" onClick={() => { playTrack(t, getTabColor(tab)); }}>
+                    <div className="queue-item-title">{t.title}</div>
+                    <div className="queue-item-artist">{t.artist}</div>
+                  </div>
+                  <div className="queue-item-actions">
+                    {i > 0 && <button className="queue-move-btn" onClick={() => moveInQueue(i, i-1)}>↑</button>}
+                    {i < queue.length - 1 && <button className="queue-move-btn" onClick={() => moveInQueue(i, i+1)}>↓</button>}
+                    {!isActive && <button className="queue-remove-btn" onClick={() => removeFromQueue(i)}>✕</button>}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
