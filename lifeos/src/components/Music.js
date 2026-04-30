@@ -272,12 +272,16 @@ function AddTrackModal({ targetPlaylist, onAdd, onClose }) {
 }
 
 // ── Audio Player for uploaded files ──
-function AudioPlayer({ src, playing, onEnded, audioRef, onTimeUpdate, onDuration }) {
+function AudioPlayer({ src, playing, volume, onEnded, audioRef, onTimeUpdate, onDuration }) {
   useEffect(() => {
-    if (!audioRef.current) return;
-    if (playing) audioRef.current.play().catch(() => {});
-    else audioRef.current.pause();
-  }, [playing, src]);
+  if (!audioRef.current) return;
+
+  // Sync uploaded file volume
+  audioRef.current.volume = volume / 100;
+
+  if (playing) audioRef.current.play().catch(() => {});
+  else audioRef.current.pause();
+}, [playing, src, volume]);
 
   return (
     <audio
@@ -305,7 +309,9 @@ export default function Music({ playerState, onPlayerChange }) {
 
   const { currentTrack, playing } = playerState;
   const isAudioTrack = !!currentTrack?.audio_url;
-  const [volume, setVolume] = useState(80);
+  const [volume, setVolume] = useState(
+  Number(localStorage.getItem('musicVolume')) || 80
+  );
   const [playMode, setPlayMode] = useState('queue');   // 'queue' | 'shuffle' | 'repeat'
   const [queue, setQueue] = useState([]);              // ordered play queue
   const [showQueue, setShowQueue] = useState(false);   // queue panel visible
@@ -315,6 +321,9 @@ export default function Music({ playerState, onPlayerChange }) {
     const list = getAllTracksForTab(tab);
     setQueue(list.map((t, i) => ({ ...t, _qi: i })));
   }, [tab, tracks]);
+  useEffect(() => {
+  localStorage.setItem('musicVolume', volume);
+}, [volume]);
 
   function cyclePlayMode() {
     setPlayMode(m => m === 'queue' ? 'shuffle' : m === 'shuffle' ? 'repeat' : 'queue');
@@ -370,9 +379,20 @@ export default function Music({ playerState, onPlayerChange }) {
   }
 
   function handleVolumeChange(val) {
-    setVolume(val);
-    onPlayerChange({ currentTrack, playing, volume: val });
+  setVolume(val);
+
+  // Uploaded/local files
+  if (audioRef2.current) {
+    audioRef2.current.volume = val / 100;
   }
+
+  // YouTube/global
+  onPlayerChange({
+    currentTrack,
+    playing,
+    volume: val
+  });
+}
 
   // ── Seek / progress for HTML5 audio tracks ──
   const [progress, setProgress] = useState(0);   // 0–100
@@ -486,6 +506,7 @@ export default function Music({ playerState, onPlayerChange }) {
         <AudioPlayer
           src={currentTrack.audio_url}
           playing={playing}
+          volume={volume}
           audioRef={audioRef2}
           onEnded={() => {
               setProgress(0);
