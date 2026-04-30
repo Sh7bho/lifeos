@@ -19,14 +19,23 @@ const QUICK_PROMPTS = [
   'Upgrade my mindset',
 ];
 
+// Keys used in sessionStorage
+const SESSION_ID_KEY = 'aria_session_id';      // ID of the current active session
+const NEW_CHAT_ID_KEY = 'aria_new_chat_id';    // ID set when "New Chat" is clicked
+const SESSION_MSGS_KEY = 'aria_session_msgs';  // In-memory messages for current session
+
+function generateId() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2);
+}
+
 export default function AICoach() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [context, setContext] = useState(null);
 
-  // useRef instead of useState — tracks whether THIS session is a "new chat"
-  // without triggering re-renders, and is NOT tied to sessionStorage persistence.
+  // true  → this is a "new chat" session; don't load or save to Supabase history
+  // false → normal session; load history from Supabase and persist new messages
   const isNewChatRef = useRef(false);
 
   const bottomRef = useRef(null);
@@ -34,25 +43,49 @@ export default function AICoach() {
   useEffect(() => {
     loadContext();
 
-    // Read the flag ONCE on mount, then immediately clear it.
-    // This way a tab switch or component remount won't re-trigger "new chat" mode.
-    const newChatFlagSet = sessionStorage.getItem('aria_new_chat') === 'true';
-    sessionStorage.removeItem('aria_new_chat'); // ← clear immediately after reading
+    const newChatId = sessionStorage.getItem(NEW_CHAT_ID_KEY);
+    const currentSessionId = sessionStorage.getItem(SESSION_ID_KEY);
 
-    if (newChatFlagSet) {
-      // User explicitly clicked "New Chat" before this mount — stay empty.
+    if (newChatId) {
+      // "New Chat" was clicked — this is a fresh session.
+      // Promote the new-chat ID to be the active session ID.
       isNewChatRef.current = true;
+      sessionStorage.setItem(SESSION_ID_KEY, newChatId);
+      sessionStorage.removeItem(NEW_CHAT_ID_KEY);
+      sessionStorage.removeItem(SESSION_MSGS_KEY);
+      setMessages([]);
+    } else if (currentSessionId) {
+      // Existing session (refresh / tab switch / remount) — restore in-memory messages.
+      // Do NOT call Supabase — keep only what happened in this session visible.
+      isNewChatRef.current = true; // treat as new chat (don't pull Supabase history)
+      const saved = sessionStorage.getItem(SESSION_MSGS_KEY);
+      if (saved) {
+        try { setMessages(JSON.parse(saved)); } catch { setMessages([]); }
+      }
     } else {
-      // Normal mount (tab switch, refresh, navigation) — restore history.
+      // Very first load ever (no session yet) — load Supabase history normally.
       isNewChatRef.current = false;
+      const freshId = generateId();
+      sessionStorage.setItem(SESSION_ID_KEY, freshId);
       getChatHistory(20)
-        .then(data => setMessages(data || []))
+        .then(data => {
+          const history = data || [];
+          setMessages(history);
+          sessionStorage.setItem(SESSION_MSGS_KEY, JSON.stringify(history));
+        })
         .catch(console.error);
     }
   }, []);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  // Keep sessionStorage in sync whenever messages change
+  useEffect(() => {
+    if (messages.length > 0) {
+      sessionStorage.setItem(SESSION_MSGS_KEY, JSON.stringify(messages));
+    }
   }, [messages]);
 
   async function loadContext() {
@@ -69,12 +102,17 @@ export default function AICoach() {
   }
 
   function clearChat() {
-    setMessages([]);
+    // Generate a new session ID and store it under the "pending new chat" key.
+    // On the next mount (or immediately below), this signals a fresh session.
+    const newId = generateId();
+    sessionStorage.setItem(NEW_CHAT_ID_KEY, newId);
+    sessionStorage.removeItem(SESSION_MSGS_KEY);
+
+    // Apply immediately without waiting for a remount
     isNewChatRef.current = true;
-    // Set the flag in sessionStorage so if the component remounts immediately
-    // (e.g. React StrictMode double-invoke), it still respects the new chat intent.
-    // It will be cleared on the very next mount.
-    sessionStorage.setItem('aria_new_chat', 'true');
+    sessionStorage.setItem(SESSION_ID_KEY, newId);
+    sessionStorage.removeItem(NEW_CHAT_ID_KEY);
+    setMessages([]);
   }
 
   const systemPrompt = context
@@ -93,7 +131,6 @@ Never sound generic, robotic, or soft. Prioritize discipline, execution, wealth-
     setLoading(true);
 
     try {
-      // Read from the ref — single source of truth, no sessionStorage re-reads
       if (!isNewChatRef.current) await saveMessage('user', cleanText);
 
       const history = [...messages, userMsg]
