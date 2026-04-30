@@ -301,6 +301,26 @@ export default function Music({ playerState, onPlayerChange }) {
 
   const { currentTrack, playing } = playerState;
   const isAudioTrack = !!currentTrack?.audio_url;
+  const [volume, setVolume] = useState(80);
+
+  function skipTrack(dir) {
+    const list = getAllTracksForTab(tab);
+    if (!list.length) return;
+    const idx = list.findIndex(t => {
+      const ytId = t.youtubeId || t.youtube_id;
+      return currentTrack && (
+        (ytId && currentTrack.youtubeId === ytId) ||
+        (t.audio_url && currentTrack.audio_url === t.audio_url)
+      );
+    });
+    const next = (idx + dir + list.length) % list.length;
+    playTrack(list[next], getTabColor(tab));
+  }
+
+  function handleVolumeChange(val) {
+    setVolume(val);
+    onPlayerChange({ currentTrack, playing, volume: val });
+  }
 
   // Online/offline detection
   useEffect(() => {
@@ -435,16 +455,20 @@ export default function Music({ playerState, onPlayerChange }) {
         </div>
       </div>
 
-      {/* Now Playing Bar */}
+      {/* Now Playing Bar — fixed bottom */}
       {currentTrack && (
-        <div className="now-playing-bar animate-fadeup" style={{ '--np-color': currentTrack.color }}>
+        <div className="now-playing-bar" style={{ '--np-color': currentTrack.color }}>
           <div className="np-glow-strip" />
           <div className="np-color-wash" />
+
+          {/* Thumb */}
           {currentTrack.thumb ? (
             <img src={currentTrack.thumb} alt="" className="np-thumb" />
           ) : (
             <div className="np-thumb np-thumb--audio">🎵</div>
           )}
+
+          {/* Info */}
           <div className="np-info">
             <div className="np-title">{currentTrack.title}</div>
             <div className="np-artist">
@@ -452,14 +476,34 @@ export default function Music({ playerState, onPlayerChange }) {
               {!isOnline && currentTrack.audio_url && <span style={{ marginLeft: 6, opacity: 0.6 }}>· offline</span>}
             </div>
           </div>
+
+          {/* EQ indicator */}
           {playing && <EqBars color={currentTrack.color} />}
-          <button
-            className="np-play-btn"
-            onClick={togglePlay}
-            style={{ background: currentTrack.color, color: '#000' }}
-          >
-            {playing ? '⏸' : '▶'}
-          </button>
+
+          {/* Controls */}
+          <div className="np-controls">
+            <button className="np-skip-btn" onClick={() => skipTrack(-1)} title="Previous">⏮</button>
+            <button
+              className="np-play-btn"
+              onClick={togglePlay}
+              style={{ background: currentTrack.color, color: '#000' }}
+            >
+              {playing ? '⏸' : '▶'}
+            </button>
+            <button className="np-skip-btn" onClick={() => skipTrack(1)} title="Next">⏭</button>
+          </div>
+
+          {/* Volume — desktop only */}
+          <div className="np-volume-wrap">
+            <span className="np-volume-icon">{volume === 0 ? '🔇' : volume < 50 ? '🔉' : '🔊'}</span>
+            <input
+              type="range"
+              className="np-volume-slider"
+              min="0" max="100"
+              value={volume}
+              onChange={e => handleVolumeChange(Number(e.target.value))}
+            />
+          </div>
         </div>
       )}
 
