@@ -502,7 +502,7 @@ export default function Music({ playerState, onPlayerChange }) {
       <div className="music-bg-orb-2" />
 
       {/* HTML5 audio for uploaded files — works in background */}
-      {isAudioTrack && (
+      {currentTrack?.audio_url && (
         <AudioPlayer
           src={currentTrack.audio_url}
           playing={playing}
