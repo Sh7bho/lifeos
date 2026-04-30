@@ -8,7 +8,10 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  animation: fc-fadein 0.3s ease;
+  animation: fc-fadein 0.25s ease;
+  /* Fill entire viewport including notch areas */
+  width: 100vw;
+  height: 100dvh;
 }
 
 @keyframes fc-fadein {
@@ -16,15 +19,16 @@
   to   { opacity: 1; }
 }
 
-/* ── Main container ── */
+/* ── Inner container ── */
 .flipclock-inner {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 28px;
+  gap: clamp(16px, 3vh, 32px);
   cursor: default;
   padding: 20px;
   user-select: none;
+  width: 100%;
 }
 
 /* ── Meta row ── */
@@ -32,49 +36,39 @@
   display: flex;
   align-items: center;
   gap: 16px;
+  min-height: 20px;
 }
 
 .fc-date,
 .fc-day {
   font-family: var(--font-mono, monospace);
-  font-size: 13px;
+  font-size: clamp(10px, 1.8vw, 14px);
   color: #555;
   letter-spacing: 0.14em;
 }
 
 .fc-date { font-weight: 500; }
-.fc-day { font-weight: 700; }
-
-/* ── Hint ── */
-.flipclock-hint {
-  margin-top: -8px;
-}
-
-.fc-hint {
-  font-family: var(--font-mono, monospace);
-  font-size: 10px;
-  color: #2a2a2a;
-  letter-spacing: 0.1em;
-}
+.fc-day  { font-weight: 700; }
 
 /* ── Digits row ── */
 .flipclock-digits {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: clamp(6px, 1.5vw, 16px);
 }
 
 /* ── Separator ── */
 .flip-sep {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: clamp(6px, 1.5vw, 14px);
   padding-bottom: 4px;
+  flex-shrink: 0;
 }
 
 .sep-dot {
-  width: 7px;
-  height: 7px;
+  width: clamp(4px, 0.9vw, 8px);
+  height: clamp(4px, 0.9vw, 8px);
   border-radius: 50%;
   background: #333;
 }
@@ -82,58 +76,57 @@
 /* ── Pair ── */
 .flip-pair {
   display: flex;
-  gap: 8px;
+  gap: clamp(3px, 0.8vw, 8px);
 }
 
-/* ── Single digit ── */
+/* ── Single digit — vw-based so it fills screen ── */
 .flip-digit {
   position: relative;
-  width: 86px;
-  height: 120px;
-  border-radius: 12px;
+  width: clamp(52px, 13vw, 110px);
+  height: clamp(72px, 18vw, 152px);
+  border-radius: clamp(8px, 1.5vw, 14px);
   background: linear-gradient(to right, #141414, #1d1d1d, #121212);
   box-shadow:
     0 10px 30px rgba(0,0,0,0.75),
     inset 0 1px 0 rgba(255,255,255,0.03);
-  perspective: 800px;
+  perspective: 600px;
   transform-style: preserve-3d;
   overflow: hidden;
+  flex-shrink: 0;
 }
 
-/* Divider */
+/* Center divider line */
 .flip-digit::after {
   content: '';
   position: absolute;
-  left: 0;
-  right: 0;
+  left: 0; right: 0;
   top: 50%;
   height: 2px;
   transform: translateY(-1px);
   background: rgba(0,0,0,0.95);
   z-index: 50;
-  box-shadow: 0 1px 2px rgba(255,255,255,0.04);
 }
 
 /* ── Shared half card ── */
 .flip-card {
   position: absolute;
-  left: 0;
-  right: 0;
+  left: 0; right: 0;
   height: 50%;
   overflow: hidden;
   display: flex;
   justify-content: center;
   backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }
 
-/* Digit text */
+/* Digit text — scales with the card */
 .flip-card span {
   font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
-  font-size: 120px;
+  font-size: clamp(72px, 18vw, 152px);
   font-weight: 700;
   color: #d6d6d6;
   line-height: 1;
-  letter-spacing: -4px;
+  letter-spacing: -0.04em;
   position: absolute;
   left: 50%;
   top: 50%;
@@ -145,129 +138,196 @@
 .flip-top-static {
   top: 0;
   background: linear-gradient(to bottom, rgba(255,255,255,0.05), rgba(0,0,0,0.08));
-  border-radius: 12px 12px 0 0;
+  border-radius: clamp(8px,1.5vw,14px) clamp(8px,1.5vw,14px) 0 0;
 }
-
-.flip-top-static span {
-  top: 100%;
-}
+.flip-top-static span { top: 100%; }
 
 /* ── Static bottom ── */
 .flip-bottom-static {
   bottom: 0;
   background: linear-gradient(to bottom, rgba(0,0,0,0.2), rgba(255,255,255,0.01));
-  border-radius: 0 0 12px 12px;
+  border-radius: 0 0 clamp(8px,1.5vw,14px) clamp(8px,1.5vw,14px);
 }
+.flip-bottom-static span { top: 0%; }
 
-.flip-bottom-static span {
-  top: 0%;
-}
-
-/* ── Animated top ── */
+/* ── Animated top flap ── */
 .flip-top-anim {
   top: 0;
   background: linear-gradient(to bottom, rgba(255,255,255,0.05), rgba(0,0,0,0.18));
-  border-radius: 12px 12px 0 0;
+  border-radius: clamp(8px,1.5vw,14px) clamp(8px,1.5vw,14px) 0 0;
   transform-origin: bottom center;
-  animation: flipTopAway 0.65s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+  animation: flipTopAway 0.48s cubic-bezier(0.4, 0, 0.2, 1) forwards;
   z-index: 20;
-  box-shadow: inset 0 -8px 12px rgba(0,0,0,0.35);
 }
+.flip-top-anim span { top: 100%; }
 
-.flip-top-anim span {
-  top: 100%;
-}
-
-/* ── Animated bottom ── */
+/* ── Animated bottom flap ── */
 .flip-bottom-anim {
   bottom: 0;
   background: linear-gradient(to bottom, rgba(0,0,0,0.28), rgba(255,255,255,0.02));
-  border-radius: 0 0 12px 12px;
+  border-radius: 0 0 clamp(8px,1.5vw,14px) clamp(8px,1.5vw,14px);
   transform-origin: top center;
-  animation: flipBottomIn 0.65s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+  animation: flipBottomIn 0.48s cubic-bezier(0.4, 0, 0.2, 1) forwards;
   z-index: 19;
-  box-shadow: inset 0 8px 12px rgba(0,0,0,0.35);
 }
+.flip-bottom-anim span { top: 0%; }
 
-.flip-bottom-anim span {
-  top: 0%;
-}
-
-/* ── Premium flip animations ── */
+/* ── Flip animations — tighter, snappier ── */
 @keyframes flipTopAway {
-  0% {
-    transform: rotateX(0deg);
-    filter: brightness(1);
-  }
-  100% {
-    transform: rotateX(-89deg);
-    filter: brightness(0.72);
-  }
+  0%   { transform: rotateX(0deg);   filter: brightness(1); }
+  100% { transform: rotateX(-90deg); filter: brightness(0.6); }
 }
 
 @keyframes flipBottomIn {
-  0% {
-    transform: rotateX(89deg);
-    filter: brightness(0.68);
-  }
-  100% {
-    transform: rotateX(0deg);
-    filter: brightness(1);
-  }
+  0%   { transform: rotateX(90deg);  filter: brightness(0.6); }
+  100% { transform: rotateX(0deg);   filter: brightness(1); }
 }
 
-/* ── Landscape ── */
-.landscape .flip-digit {
-  width: 108px;
-  height: 150px;
+/* ── Centiseconds (stopwatch) ── */
+.fc-cs-wrap {
+  display: flex;
+  align-items: flex-end;
+  padding-bottom: clamp(6px, 1.2vw, 12px);
+}
+.fc-cs {
+  font-family: var(--font-mono, monospace);
+  font-size: clamp(18px, 4vw, 40px);
+  font-weight: 700;
+  color: #555;
+  letter-spacing: -0.02em;
 }
 
-.landscape .flip-card span {
-  font-size: 150px;
+/* ── Controls (timer / stopwatch) ── */
+.fc-controls {
+  display: flex;
+  gap: 12px;
+  align-items: center;
 }
 
-/* ── Mobile ── */
-@media (max-width: 480px) {
-  .flipclock-inner {
-    gap: 20px;
-    padding: 16px;
-  }
+.fc-btn {
+  padding: clamp(8px, 1.5vw, 12px) clamp(20px, 4vw, 36px);
+  background: #fff;
+  color: #000;
+  border: none;
+  border-radius: 999px;
+  font-family: var(--font-mono, monospace);
+  font-size: clamp(10px, 1.6vw, 13px);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
 
-  .flipclock-digits {
-    gap: 8px;
-  }
+.fc-btn:active { transform: scale(0.94); }
 
-  .flip-pair {
-    gap: 4px;
-  }
+.fc-btn-ghost {
+  background: transparent;
+  color: #444;
+  border: 1px solid #2a2a2a;
+}
+.fc-btn-ghost:hover { color: #888; border-color: #444; }
 
-  .flip-digit {
-    width: 62px;
-    height: 88px;
-    border-radius: 10px;
-  }
+/* ── Timer setup screen ── */
+.fc-setup {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(20px, 4vh, 36px);
+}
 
-  .flip-card span {
-    font-size: 86px;
-    letter-spacing: -2px;
-  }
+.fc-setup-row {
+  display: flex;
+  align-items: center;
+  gap: clamp(10px, 2vw, 20px);
+}
 
-  .flip-sep {
-    gap: 8px;
-    padding-bottom: 2px;
-  }
+.fc-adj {
+  width: clamp(36px, 8vw, 52px);
+  height: clamp(36px, 8vw, 52px);
+  background: #1a1a1a;
+  color: #888;
+  border: 1px solid #2a2a2a;
+  border-radius: 50%;
+  font-family: var(--font-mono, monospace);
+  font-size: clamp(11px, 1.8vw, 14px);
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+.fc-adj:hover  { background: #222; color: #ccc; border-color: #444; }
+.fc-adj:active { transform: scale(0.9); }
 
-  .sep-dot {
-    width: 5px;
-    height: 5px;
-  }
+.fc-setup-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: clamp(70px, 14vw, 120px);
+}
+.fc-setup-num {
+  font-family: 'SF Pro Display', -apple-system, sans-serif;
+  font-size: clamp(52px, 12vw, 96px);
+  font-weight: 700;
+  color: #d6d6d6;
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+.fc-setup-unit {
+  font-family: var(--font-mono, monospace);
+  font-size: clamp(10px, 1.8vw, 13px);
+  color: #444;
+  letter-spacing: 0.14em;
+}
 
-  .fc-date,
-  .fc-day {
-    font-size: 11px;
-  }
+/* ── Done flash ── */
+.fc-done .flip-card span { color: #a8ff78; }
+@keyframes fc-flash { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+.fc-done { animation: fc-flash 0.8s ease infinite; }
 
-  .fc-hint {
-    font-size: 9px;
-  }
+/* ── Mode tabs ── */
+.fc-mode-tabs {
+  display: flex;
+  gap: 4px;
+  background: #0f0f0f;
+  border: 1px solid #1f1f1f;
+  border-radius: 999px;
+  padding: 4px;
+}
+
+.fc-tab {
+  padding: clamp(5px, 1vw, 8px) clamp(12px, 2.5vw, 22px);
+  border-radius: 999px;
+  border: none;
+  background: transparent;
+  color: #444;
+  font-family: var(--font-mono, monospace);
+  font-size: clamp(9px, 1.4vw, 11px);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.fc-tab--active {
+  background: #fff;
+  color: #000;
+}
+
+/* ── Hint ── */
+.flipclock-hint { margin-top: -4px; }
+.fc-hint {
+  font-family: var(--font-mono, monospace);
+  font-size: clamp(9px, 1.3vw, 11px);
+  color: #222;
+  letter-spacing: 0.1em;
+}
+
+/* ── Landscape phones ── */
+@media (orientation: landscape) and (max-height: 500px) {
+  .flipclock-inner { gap: clamp(8px, 2vh, 16px); padding: 10px; }
+  .flipclock-meta  { display: none; }
+  .flipclock-hint  { display: none; }
 }
