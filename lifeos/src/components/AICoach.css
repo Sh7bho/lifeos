@@ -6,9 +6,19 @@
 }
 
 .coach-header {
-  padding: 20px 20px 12px;
+  padding: 16px 20px 12px;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
+  background: linear-gradient(180deg, rgba(0,217,255,0.03) 0%, transparent 100%);
+  position: relative;
+}
+
+.coach-header::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(0,217,255,0.3), transparent);
 }
 
 .coach-title-row {
@@ -32,19 +42,22 @@
   font-family: var(--font-display);
   font-size: 20px;
   font-weight: 800;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.12em;
+  color: var(--accent-cyan);
+  text-shadow: 0 0 20px rgba(0,217,255,0.4);
 }
 
 .coach-role {
   font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: 0.15em;
-  color: var(--text-dim);
-  background: var(--surface3);
-  border: 1px solid var(--border);
-  padding: 2px 8px;
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  color: var(--accent-cyan);
+  background: rgba(0,217,255,0.06);
+  border: 1px solid rgba(0,217,255,0.2);
+  padding: 3px 8px;
   border-radius: 4px;
   margin-left: 4px;
+  opacity: 0.7;
 }
 
 .clear-chat-btn {
@@ -97,30 +110,40 @@
 .coach-empty {
   margin: auto;
   text-align: center;
-  padding: 40px 0;
+  padding: 40px 20px;
 }
 
 .coach-empty-icon {
-  font-size: 32px;
+  font-size: 28px;
   color: var(--accent-cyan);
-  margin-bottom: 12px;
-  filter: drop-shadow(0 0 12px var(--accent-cyan));
+  margin-bottom: 16px;
+  filter: drop-shadow(0 0 16px var(--accent-cyan));
+  animation: pulse 3s ease infinite;
 }
 
 .coach-empty-title {
   font-family: var(--font-display);
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 800;
-  letter-spacing: 0.08em;
-  margin-bottom: 8px;
+  letter-spacing: 0.12em;
+  margin-bottom: 10px;
+  color: var(--text);
 }
 
 .coach-empty-sub {
   font-family: var(--font-mono);
   font-size: 11px;
   color: var(--text-dim);
-  letter-spacing: 0.05em;
-  line-height: 1.7;
+  letter-spacing: 0.06em;
+  line-height: 1.9;
+  border: 1px solid var(--border);
+  border-left: 2px solid rgba(0,217,255,0.3);
+  background: rgba(0,217,255,0.02);
+  padding: 12px 16px;
+  border-radius: 8px;
+  text-align: left;
+  max-width: 320px;
+  margin: 0 auto;
 }
 
 .msg {
@@ -140,9 +163,11 @@
 .msg-label {
   font-family: var(--font-mono);
   font-size: 9px;
-  letter-spacing: 0.15em;
+  letter-spacing: 0.2em;
   color: var(--accent-cyan);
   padding: 0 4px;
+  opacity: 0.8;
+  text-shadow: 0 0 8px rgba(0,217,255,0.5);
 }
 
 .msg-bubble {
@@ -170,6 +195,7 @@
   background: var(--surface2);
   border: 1px solid var(--border-bright);
   border-bottom-left-radius: 4px;
+  border-left: 2px solid rgba(0,217,255,0.25);
 }
 
 .msg--assistant .msg-text {
@@ -271,20 +297,21 @@
   border: 1px solid var(--border-bright);
   border-radius: 12px;
   color: var(--text);
-  font-family: var(--font-body);
-  font-size: 14px;
-  letter-spacing: 0.02em;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  letter-spacing: 0.03em;
   outline: none;
   transition: all 0.2s ease;
 }
 
 .coach-input:focus {
   border-color: var(--accent-cyan);
-  box-shadow: 0 0 0 2px rgba(0,255,255,0.08);
+  box-shadow: 0 0 0 2px rgba(0,217,255,0.08), 0 0 16px rgba(0,217,255,0.05);
 }
 
 .coach-input::placeholder {
   color: var(--text-muted);
+  letter-spacing: 0.05em;
 }
 
 .send-btn {
