@@ -281,10 +281,11 @@ function AudioPlayer({ src, playing, volume, onEnded, audioRef, onTimeUpdate, on
 
   if (playing) audioRef.current.play().catch(() => {});
   else audioRef.current.pause();
-}, [playing, src, volume]);
+}, [playing, volume]);
 
   return (
     <audio
+      key="persistent-audio-player"
       ref={audioRef}
       src={src}
       onEnded={onEnded}
