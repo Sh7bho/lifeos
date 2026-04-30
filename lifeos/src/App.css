@@ -326,3 +326,50 @@ html, body {
   animation: spin 0.8s linear infinite;
   display: inline-block;
 }
+
+/* ── Coach page music chip (tiny, top-right, never covers input) ── */
+.coach-music-chip {
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px 6px 6px;
+  background: rgba(12,12,12,0.94);
+  border: 1px solid color-mix(in srgb, var(--gp-color) 40%, rgba(255,255,255,0.1));
+  border-radius: 99px;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  z-index: 300;
+  cursor: pointer;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.5), 0 0 20px color-mix(in srgb, var(--gp-color) 10%, transparent);
+  max-width: 200px;
+  animation: fadeUp 0.3s ease both;
+}
+
+.coach-chip-play {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--gp-color) 20%, rgba(255,255,255,0.05));
+  border: 1px solid color-mix(in srgb, var(--gp-color) 50%, transparent);
+  font-size: 11px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: transform 0.15s ease;
+  color: var(--gp-color) !important;
+}
+.coach-chip-play:active { transform: scale(0.88); }
+
+.coach-chip-title {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-dim);
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
