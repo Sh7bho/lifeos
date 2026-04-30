@@ -71,20 +71,35 @@ html, body {
   bottom: calc(var(--nav-h) + var(--safe-bottom) + 8px);
   left: 12px;
   right: 12px;
-  height: 52px;
-  background: rgba(18, 18, 18, 0.95);
-  border: 1px solid color-mix(in srgb, var(--gp-color) 30%, transparent);
-  border-radius: 14px;
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  z-index: 100;
+  height: 58px;
+  background: rgba(12, 12, 12, 0.96);
+  border: 1px solid color-mix(in srgb, var(--gp-color) 35%, rgba(255,255,255,0.08));
+  border-radius: 16px;
+  backdrop-filter: blur(32px);
+  -webkit-backdrop-filter: blur(32px);
+  z-index: 300; /* above content, below navbar at 999 */
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 6px 0 10px;
+  padding: 0 8px 0 12px;
   cursor: pointer;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.5), 0 0 0 1px color-mix(in srgb, var(--gp-color) 10%, transparent);
+  box-shadow:
+    0 -2px 24px rgba(0,0,0,0.6),
+    0 0 0 1px color-mix(in srgb, var(--gp-color) 12%, transparent),
+    0 0 32px color-mix(in srgb, var(--gp-color) 8%, transparent);
   animation: fadeUp 0.3s ease both;
+  overflow: hidden;
+}
+
+/* top accent glow line */
+.global-player-pill::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 15%; right: 15%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gp-color), transparent);
+  opacity: 0.6;
+  pointer-events: none;
 }
 
 .gp-info {
@@ -96,46 +111,104 @@ html, body {
 }
 
 .gp-thumb {
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
   object-fit: cover;
   flex-shrink: 0;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+}
+
+.gp-thumb--audio {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+  font-size: 18px;
+  border-radius: 10px;
+}
+
+.gp-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .gp-title {
   font-family: var(--font-body);
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text);
+}
+
+.gp-artist {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-dim);
+  letter-spacing: 0.04em;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
+/* tiny EQ bars */
+.gp-eq {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 16px;
+  flex-shrink: 0;
+  margin-right: 4px;
+}
+.gp-eq-bar {
+  width: 3px;
+  background: var(--gp-color);
+  border-radius: 2px;
+  animation: eqPulse 0.6s ease infinite alternate;
+  box-shadow: 0 0 4px var(--gp-color);
+}
+.gp-eq-bar:nth-child(1) { height: 55%; animation-delay: 0s; }
+.gp-eq-bar:nth-child(2) { height: 100%; animation-delay: 0.15s; }
+.gp-eq-bar:nth-child(3) { height: 70%; animation-delay: 0.3s; }
+
+@keyframes eqPulse {
+  from { transform: scaleY(0.25); }
+  to   { transform: scaleY(1); }
+}
+
 .gp-play {
   width: 40px;
   height: 40px;
-  background: none;
+  border-radius: 50%;
   border: none;
-  font-size: 18px;
+  font-size: 15px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
   transition: transform 0.2s ease;
+  box-shadow: 0 0 16px color-mix(in srgb, var(--gp-color) 40%, transparent);
+  position: relative;
+  z-index: 1;
 }
 
 .gp-play:active { transform: scale(0.88); }
 
-/* On desktop — pill moves to top right */
+/* On desktop — stays bottom-left, wider, never covers header buttons */
 @media (min-width: 768px) {
   .global-player-pill {
-    top: 16px;
-    bottom: auto;
-    left: auto;
-    right: 16px;
-    width: 300px;
+    bottom: calc(var(--nav-h) + var(--safe-bottom) + 12px);
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    width: 380px;
   }
 }
 
