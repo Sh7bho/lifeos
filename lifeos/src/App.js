@@ -53,7 +53,7 @@ function App() {
       )}
 
       {/* Mini now-playing pill — visible on all views except music tab */}
-      {playerState.currentTrack && view !== 'music' && (
+      {playerState.currentTrack && view !== 'music' && view !== 'coach' && (
         <div
           className="global-player-pill"
           style={{ '--gp-color': playerState.currentTrack.color }}
@@ -82,6 +82,24 @@ function App() {
           >
             {playerState.playing ? '⏸' : '▶'}
           </button>
+        </div>
+      )}
+
+      {/* Tiny floating music indicator on coach — doesn't cover input */}
+      {playerState.currentTrack && view === 'coach' && (
+        <div
+          className="coach-music-chip"
+          style={{ '--gp-color': playerState.currentTrack.color }}
+          onClick={() => setView('music')}
+        >
+          <button
+            className="coach-chip-play"
+            style={{ color: playerState.currentTrack.color }}
+            onClick={e => { e.stopPropagation(); handlePlayerChange({ playing: !playerState.playing }); }}
+          >
+            {playerState.playing ? '⏸' : '▶'}
+          </button>
+          <span className="coach-chip-title">{playerState.currentTrack.title}</span>
         </div>
       )}
 
