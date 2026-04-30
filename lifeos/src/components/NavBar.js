@@ -5,6 +5,7 @@ const TABS = [
   { id: 'dashboard', icon: '⬡', label: 'HQ' },
   { id: 'log', icon: '◈', label: 'LOG' },
   { id: 'stats', icon: '◎', label: 'STATS' },
+  { id: 'music', icon: '♪', label: 'SOUND' },
   { id: 'coach', icon: '◆', label: 'ARIA' },
 ];
 
