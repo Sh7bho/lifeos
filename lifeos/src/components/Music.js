@@ -272,9 +272,7 @@ function AddTrackModal({ targetPlaylist, onAdd, onClose }) {
 }
 
 // ── Audio Player for uploaded files ──
-function AudioPlayer({ src, playing, onEnded }) {
-  const audioRef = useRef(null);
-
+function AudioPlayer({ src, playing, onEnded, audioRef, onTimeUpdate, onDuration }) {
   useEffect(() => {
     if (!audioRef.current) return;
     if (playing) audioRef.current.play().catch(() => {});
@@ -286,6 +284,12 @@ function AudioPlayer({ src, playing, onEnded }) {
       ref={audioRef}
       src={src}
       onEnded={onEnded}
+      onTimeUpdate={() => {
+        if (audioRef.current) onTimeUpdate(audioRef.current.currentTime, audioRef.current.duration);
+      }}
+      onLoadedMetadata={() => {
+        if (audioRef.current) onDuration(audioRef.current.duration);
+      }}
       style={{ display: 'none' }}
     />
   );
@@ -320,6 +324,27 @@ export default function Music({ playerState, onPlayerChange }) {
   function handleVolumeChange(val) {
     setVolume(val);
     onPlayerChange({ currentTrack, playing, volume: val });
+  }
+
+  // ── Seek / progress for HTML5 audio tracks ──
+  const [progress, setProgress] = useState(0);   // 0–100
+  const [duration, setDuration] = useState(0);
+  const audioRef2 = useRef(null);  // shared ref passed down
+
+  function handleSeek(val) {
+    setProgress(val);
+    if (audioRef2.current && duration) {
+      audioRef2.current.currentTime = (val / 100) * duration;
+    }
+    // For YouTube we can only approximate — pass to parent
+    onPlayerChange({ currentTrack, playing, volume, seekPct: val });
+  }
+
+  function formatTime(sec) {
+    if (!sec || isNaN(sec)) return '0:00';
+    const m = Math.floor(sec / 60);
+    const s = Math.floor(sec % 60);
+    return `${m}:${s.toString().padStart(2, '0')}`;
   }
 
   // Online/offline detection
@@ -413,7 +438,10 @@ export default function Music({ playerState, onPlayerChange }) {
         <AudioPlayer
           src={currentTrack.audio_url}
           playing={playing}
-          onEnded={() => onPlayerChange({ playing: false })}
+          audioRef={audioRef2}
+          onEnded={() => { onPlayerChange({ playing: false }); setProgress(0); }}
+          onTimeUpdate={(t, d) => { if (d) setProgress((t / d) * 100); }}
+          onDuration={d => setDuration(d)}
         />
       )}
 
@@ -461,48 +489,65 @@ export default function Music({ playerState, onPlayerChange }) {
           <div className="np-glow-strip" />
           <div className="np-color-wash" />
 
-          {/* Thumb */}
-          {currentTrack.thumb ? (
-            <img src={currentTrack.thumb} alt="" className="np-thumb" />
-          ) : (
-            <div className="np-thumb np-thumb--audio">🎵</div>
-          )}
-
-          {/* Info */}
-          <div className="np-info">
-            <div className="np-title">{currentTrack.title}</div>
-            <div className="np-artist">
-              {currentTrack.audio_url ? '📁 ' : '▶ '}{currentTrack.artist}
-              {!isOnline && currentTrack.audio_url && <span style={{ marginLeft: 6, opacity: 0.6 }}>· offline</span>}
-            </div>
-          </div>
-
-          {/* EQ indicator */}
-          {playing && <EqBars color={currentTrack.color} />}
-
-          {/* Controls */}
-          <div className="np-controls">
-            <button className="np-skip-btn" onClick={() => skipTrack(-1)} title="Previous">⏮</button>
-            <button
-              className="np-play-btn"
-              onClick={togglePlay}
-              style={{ background: currentTrack.color, color: '#000' }}
-            >
-              {playing ? '⏸' : '▶'}
-            </button>
-            <button className="np-skip-btn" onClick={() => skipTrack(1)} title="Next">⏭</button>
-          </div>
-
-          {/* Volume — desktop only */}
-          <div className="np-volume-wrap">
-            <span className="np-volume-icon">{volume === 0 ? '🔇' : volume < 50 ? '🔉' : '🔊'}</span>
+          {/* Seek bar spans full width at very top of bar */}
+          <div className="np-seek-row">
+            <span className="np-time">{isAudioTrack ? formatTime((progress/100)*duration) : ''}</span>
             <input
               type="range"
-              className="np-volume-slider"
+              className="np-seek-slider"
               min="0" max="100"
-              value={volume}
-              onChange={e => handleVolumeChange(Number(e.target.value))}
+              value={progress}
+              onChange={e => handleSeek(Number(e.target.value))}
+              style={{ '--pct': `${progress}%` }}
             />
+            <span className="np-time">{isAudioTrack ? formatTime(duration) : ''}</span>
+          </div>
+
+          {/* Main row: thumb + info + controls + volume */}
+          <div className="np-main-row">
+            {/* Thumb */}
+            {currentTrack.thumb ? (
+              <img src={currentTrack.thumb} alt="" className="np-thumb" />
+            ) : (
+              <div className="np-thumb np-thumb--audio">🎵</div>
+            )}
+
+            {/* Info */}
+            <div className="np-info">
+              <div className="np-title">{currentTrack.title}</div>
+              <div className="np-artist">
+                {currentTrack.audio_url ? '📁 ' : '▶ '}{currentTrack.artist}
+                {!isOnline && currentTrack.audio_url && <span style={{ marginLeft: 6, opacity: 0.6 }}>· offline</span>}
+              </div>
+            </div>
+
+            {/* EQ indicator */}
+            {playing && <EqBars color={currentTrack.color} />}
+
+            {/* Controls */}
+            <div className="np-controls">
+              <button className="np-skip-btn" onClick={() => skipTrack(-1)} title="Previous">⏮</button>
+              <button
+                className="np-play-btn"
+                onClick={togglePlay}
+                style={{ background: currentTrack.color, color: '#000' }}
+              >
+                {playing ? '⏸' : '▶'}
+              </button>
+              <button className="np-skip-btn" onClick={() => skipTrack(1)} title="Next">⏭</button>
+            </div>
+
+            {/* Volume — desktop only */}
+            <div className="np-volume-wrap">
+              <span className="np-volume-icon">{volume === 0 ? '🔇' : volume < 50 ? '🔉' : '🔊'}</span>
+              <input
+                type="range"
+                className="np-volume-slider"
+                min="0" max="100"
+                value={volume}
+                onChange={e => handleVolumeChange(Number(e.target.value))}
+              />
+            </div>
           </div>
         </div>
       )}
