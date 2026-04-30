@@ -509,11 +509,27 @@ export default function Music({ playerState, onPlayerChange }) {
           volume={volume}
           audioRef={audioRef2}
           onEnded={() => {
-              setProgress(0);
-              const next = getNextTrack(1);
-              if (next) playTrack(next, getTabColor(tab));
-              else onPlayerChange({ playing: false });
-            }}
+           setProgress(0);
+
+  // Repeat current uploaded track
+  if (playMode === 'repeat' && audioRef2.current) {
+    audioRef2.current.currentTime = 0;
+    setProgress(0);
+    audioRef2.current.play().catch(() => {});
+    return;
+  }
+
+  const next = getNextTrack(1);
+
+  if (next) {
+    playTrack(next, getTabColor(tab));
+  } else {
+    onPlayerChange({
+      currentTrack: null,
+      playing: false
+    });
+  }
+}}
           onTimeUpdate={(t, d) => { if (d) setProgress((t / d) * 100); }}
           onDuration={d => setDuration(d)}
         />
