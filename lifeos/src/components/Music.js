@@ -5,33 +5,32 @@ import './Music.css';
 const BUCKET = 'audio-tracks';
 
 const CURATED = [
-  { id: 'focus', label: 'DEEP FOCUS', icon: '🧠', color: '#00D9FF' },
-  { id: 'gym',   label: 'GYM MODE',   icon: '💪', color: '#FF6B35' },
-  { id: 'grind', label: 'LATE NIGHT GRIND', icon: '🌙', color: '#A8FF78' },
-  { id: 'boss',  label: 'BOSS MINDSET', icon: '📈', color: '#FFD700' },
+  { id: 'focus', label: 'DEEP FOCUS',       icon: '🧠', color: '#C8A96E' },
+  { id: 'gym',   label: 'GYM MODE',         icon: '💪', color: '#E8624A' },
+  { id: 'grind', label: 'LATE NIGHT GRIND', icon: '🌙', color: '#7B9CFF' },
+  { id: 'boss',  label: 'BOSS MINDSET',     icon: '📈', color: '#C8A96E' },
 ];
 
-// Built-in curated tracks (fallback / seed)
 const CURATED_SEED = {
   focus: [
-    { id: 'c1', title: 'Lo-Fi Hip Hop Radio', artist: 'Lofi Girl', youtubeId: 'jfKfPfyJRdk', thumb: 'https://img.youtube.com/vi/jfKfPfyJRdk/mqdefault.jpg', playlist: 'focus' },
+    { id: 'c1', title: 'Lo-Fi Hip Hop Radio',  artist: 'Lofi Girl',      youtubeId: 'jfKfPfyJRdk', thumb: 'https://img.youtube.com/vi/jfKfPfyJRdk/mqdefault.jpg', playlist: 'focus' },
     { id: 'c2', title: 'Dark Academia Study',  artist: 'Aesthetic Vibes', youtubeId: '7NOSDKb0HlU', thumb: 'https://img.youtube.com/vi/7NOSDKb0HlU/mqdefault.jpg', playlist: 'focus' },
-    { id: 'c3', title: 'Dark Lo-Fi Beats',     artist: 'ChillHop', youtubeId: 'S_MOd40zlYU', thumb: 'https://img.youtube.com/vi/S_MOd40zlYU/mqdefault.jpg', playlist: 'focus' },
+    { id: 'c3', title: 'Dark Lo-Fi Beats',     artist: 'ChillHop',        youtubeId: 'S_MOd40zlYU', thumb: 'https://img.youtube.com/vi/S_MOd40zlYU/mqdefault.jpg', playlist: 'focus' },
   ],
   gym: [
-    { id: 'c4', title: 'Workout Motivation', artist: 'Various',      youtubeId: 'Y8RKTnOqOFs', thumb: 'https://img.youtube.com/vi/Y8RKTnOqOFs/mqdefault.jpg', playlist: 'gym' },
-    { id: 'c5', title: 'Hard Trap Beats',    artist: 'Trap Nation',  youtubeId: 'Q3y-80HBM6Q', thumb: 'https://img.youtube.com/vi/Q3y-80HBM6Q/mqdefault.jpg', playlist: 'gym' },
-    { id: 'c6', title: 'Beast Mode Hip Hop', artist: 'Various',      youtubeId: 'pMRbplROKEM', thumb: 'https://img.youtube.com/vi/pMRbplROKEM/mqdefault.jpg', playlist: 'gym' },
+    { id: 'c4', title: 'Workout Motivation',   artist: 'Various',         youtubeId: 'Y8RKTnOqOFs', thumb: 'https://img.youtube.com/vi/Y8RKTnOqOFs/mqdefault.jpg', playlist: 'gym' },
+    { id: 'c5', title: 'Hard Trap Beats',      artist: 'Trap Nation',     youtubeId: 'Q3y-80HBM6Q', thumb: 'https://img.youtube.com/vi/Q3y-80HBM6Q/mqdefault.jpg', playlist: 'gym' },
+    { id: 'c6', title: 'Beast Mode Hip Hop',   artist: 'Various',         youtubeId: 'pMRbplROKEM', thumb: 'https://img.youtube.com/vi/pMRbplROKEM/mqdefault.jpg', playlist: 'gym' },
   ],
   grind: [
-    { id: 'c7', title: 'Night Owl Lo-Fi',     artist: 'Lofi Girl', youtubeId: 'rUxyKA_-grg', thumb: 'https://img.youtube.com/vi/rUxyKA_-grg/mqdefault.jpg', playlist: 'grind' },
-    { id: 'c8', title: 'Midnight Study Beats', artist: 'Various',  youtubeId: 'n61ULEU7CO0', thumb: 'https://img.youtube.com/vi/n61ULEU7CO0/mqdefault.jpg', playlist: 'grind' },
-    { id: 'c9', title: 'Chill Trap Night',    artist: 'Various',   youtubeId: 'H-aHaFMVkQU', thumb: 'https://img.youtube.com/vi/H-aHaFMVkQU/mqdefault.jpg', playlist: 'grind' },
+    { id: 'c7', title: 'Night Owl Lo-Fi',      artist: 'Lofi Girl',       youtubeId: 'rUxyKA_-grg', thumb: 'https://img.youtube.com/vi/rUxyKA_-grg/mqdefault.jpg', playlist: 'grind' },
+    { id: 'c8', title: 'Midnight Study Beats', artist: 'Various',         youtubeId: 'n61ULEU7CO0', thumb: 'https://img.youtube.com/vi/n61ULEU7CO0/mqdefault.jpg', playlist: 'grind' },
+    { id: 'c9', title: 'Chill Trap Night',     artist: 'Various',         youtubeId: 'H-aHaFMVkQU', thumb: 'https://img.youtube.com/vi/H-aHaFMVkQU/mqdefault.jpg', playlist: 'grind' },
   ],
   boss: [
-    { id: 'c10', title: 'Jazz & Coffee',      artist: 'Café Music', youtubeId: 'DSGyEsJ17cI', thumb: 'https://img.youtube.com/vi/DSGyEsJ17cI/mqdefault.jpg', playlist: 'boss' },
-    { id: 'c11', title: 'Smooth Executive',   artist: 'Various',    youtubeId: 'lTRiuFIWV54', thumb: 'https://img.youtube.com/vi/lTRiuFIWV54/mqdefault.jpg', playlist: 'boss' },
-    { id: 'c12', title: 'Entrepreneur Mix',   artist: 'Various',    youtubeId: 'ZXsQAXx_ao0', thumb: 'https://img.youtube.com/vi/ZXsQAXx_ao0/mqdefault.jpg', playlist: 'boss' },
+    { id: 'c10', title: 'Jazz & Coffee',       artist: 'Café Music',      youtubeId: 'DSGyEsJ17cI', thumb: 'https://img.youtube.com/vi/DSGyEsJ17cI/mqdefault.jpg', playlist: 'boss' },
+    { id: 'c11', title: 'Smooth Executive',    artist: 'Various',         youtubeId: 'lTRiuFIWV54', thumb: 'https://img.youtube.com/vi/lTRiuFIWV54/mqdefault.jpg', playlist: 'boss' },
+    { id: 'c12', title: 'Entrepreneur Mix',    artist: 'Various',         youtubeId: 'ZXsQAXx_ao0', thumb: 'https://img.youtube.com/vi/ZXsQAXx_ao0/mqdefault.jpg', playlist: 'boss' },
   ],
 };
 
@@ -53,7 +52,6 @@ async function fetchYouTubeTitle(videoId) {
   } catch { return null; }
 }
 
-// ── Supabase helpers ──
 async function loadTracks(playlist) {
   try {
     const { data } = await supabase.from('my_tracks').select('*').eq('playlist', playlist).order('created_at', { ascending: false });
@@ -88,8 +86,8 @@ async function uploadAudio(file) {
 function EqBars({ color }) {
   return (
     <div className="eq-bars">
-      {[1,2,3,4].map(i => (
-        <div key={i} className="eq-bar" style={{ '--c': color, animationDelay: `${i * 0.12}s` }} />
+      {[1,2,3,4,5].map(i => (
+        <div key={i} className="eq-bar" style={{ '--c': color, animationDelay: `${i * 0.1}s` }} />
       ))}
     </div>
   );
@@ -97,7 +95,7 @@ function EqBars({ color }) {
 
 // ── Add Track Modal ──
 function AddTrackModal({ targetPlaylist, onAdd, onClose }) {
-  const [mode, setMode] = useState('youtube'); // 'youtube' | 'file'
+  const [mode, setMode] = useState('youtube');
   const [url, setUrl] = useState('');
   const [title, setTitle] = useState('');
   const [artist, setArtist] = useState('');
@@ -108,7 +106,7 @@ function AddTrackModal({ targetPlaylist, onAdd, onClose }) {
   const [uploadProgress, setUploadProgress] = useState(0);
   const fileRef = useRef();
 
-  const pl = CURATED.find(p => p.id === targetPlaylist) || { label: 'MY LIBRARY', color: '#FF78C4' };
+  const pl = CURATED.find(p => p.id === targetPlaylist) || { label: 'MY LIBRARY', color: '#C8A96E' };
 
   async function handleFetch() {
     const id = extractYouTubeId(url.trim());
@@ -169,18 +167,22 @@ function AddTrackModal({ targetPlaylist, onAdd, onClose }) {
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-card" onClick={e => e.stopPropagation()}>
+        <div className="modal-drag-pill" />
         <div className="modal-header">
-          <div>
+          <div className="modal-header-left">
             <span className="modal-title">ADD TRACK</span>
             <span className="modal-playlist-badge" style={{ '--pc': pl.color }}>{pl.label}</span>
           </div>
           <button className="modal-close" onClick={onClose}>✕</button>
         </div>
 
-        {/* Mode toggle */}
         <div className="modal-mode-toggle">
-          <button className={`mode-btn ${mode === 'youtube' ? 'mode-btn--active' : ''}`} onClick={() => setMode('youtube')}>▶ YouTube</button>
-          <button className={`mode-btn ${mode === 'file' ? 'mode-btn--active' : ''}`} onClick={() => setMode('file')}>📁 Upload File</button>
+          <button className={`mode-btn ${mode === 'youtube' ? 'mode-btn--active' : ''}`} onClick={() => setMode('youtube')}>
+            <span className="mode-btn-icon">▶</span> YouTube
+          </button>
+          <button className={`mode-btn ${mode === 'file' ? 'mode-btn--active' : ''}`} onClick={() => setMode('file')}>
+            <span className="mode-btn-icon">↑</span> Upload
+          </button>
         </div>
 
         <div className="modal-body">
@@ -195,7 +197,7 @@ function AddTrackModal({ targetPlaylist, onAdd, onClose }) {
                   onChange={e => { setUrl(e.target.value); setFetched(false); setError(''); }}
                 />
                 <button className="modal-fetch-btn" onClick={handleFetch} disabled={loading || !url.trim()}>
-                  {loading ? <span className="spinner" style={{ width: 14, height: 14 }} /> : 'FETCH'}
+                  {loading ? <span className="spinner-sm" /> : 'FETCH'}
                 </button>
               </div>
             </>
@@ -217,7 +219,7 @@ function AddTrackModal({ targetPlaylist, onAdd, onClose }) {
                 />
                 {file ? (
                   <div className="file-info">
-                    <span className="file-icon">🎵</span>
+                    <div className="file-icon-wrap">♪</div>
                     <div>
                       <div className="file-name">{file.name}</div>
                       <div className="file-size">{(file.size / 1024 / 1024).toFixed(1)} MB</div>
@@ -225,9 +227,9 @@ function AddTrackModal({ targetPlaylist, onAdd, onClose }) {
                   </div>
                 ) : (
                   <div className="file-placeholder">
-                    <span style={{ fontSize: 28 }}>📂</span>
-                    <div>Tap to choose or drag & drop</div>
-                    <div style={{ fontSize: 10, opacity: 0.5, marginTop: 4 }}>MP3, WAV, M4A, OGG supported</div>
+                    <div className="file-upload-icon">↑</div>
+                    <div className="file-upload-label">Tap to choose or drag & drop</div>
+                    <div className="file-upload-hint">MP3 · WAV · M4A · OGG</div>
                   </div>
                 )}
               </div>
@@ -241,7 +243,7 @@ function AddTrackModal({ targetPlaylist, onAdd, onClose }) {
 
           {error && <div className="modal-error">{error}</div>}
 
-          <label className="modal-label" style={{ marginTop: 14 }}>TITLE</label>
+          <label className="modal-label" style={{ marginTop: 16 }}>TITLE</label>
           <input className="modal-input" placeholder="Track name" value={title} onChange={e => setTitle(e.target.value)} />
 
           <label className="modal-label" style={{ marginTop: 14 }}>ARTIST</label>
@@ -264,72 +266,93 @@ function AddTrackModal({ targetPlaylist, onAdd, onClose }) {
           disabled={loading || !title.trim() || (mode === 'youtube' ? !url.trim() : !file)}
           style={{ '--sb-color': pl.color }}
         >
-          {loading ? (mode === 'file' ? `UPLOADING ${uploadProgress}%...` : 'SAVING...') : 'ADD TO LIBRARY →'}
+          {loading ? (mode === 'file' ? `UPLOADING ${uploadProgress}%` : 'SAVING...') : 'ADD TO LIBRARY'}
+          {!loading && <span className="modal-save-arrow">→</span>}
         </button>
       </div>
     </div>
   );
 }
 
-// ── Audio Player for uploaded files ──
-function AudioPlayer({ src, playing, volume, onEnded, audioRef, onTimeUpdate, onDuration }) {
-  useEffect(() => {
-  if (!audioRef.current) return;
-
-  // Sync uploaded file volume
-  audioRef.current.volume = volume / 100;
-
-  if (playing) audioRef.current.play().catch(() => {});
-  else audioRef.current.pause();
-}, [playing, volume]);
-
-  return (
-    <audio
-      key="persistent-audio-player"
-      ref={audioRef}
-      src={src}
-      onEnded={onEnded}
-      onTimeUpdate={() => {
-        if (audioRef.current) onTimeUpdate(audioRef.current.currentTime, audioRef.current.duration);
-      }}
-      onLoadedMetadata={() => {
-        if (audioRef.current) onDuration(audioRef.current.duration);
-      }}
-      style={{ display: 'none' }}
-    />
-  );
-}
-
 // ── Main Component ──
 export default function Music({ playerState, onPlayerChange }) {
   const [tab, setTab] = useState('my');
-  const [tracks, setTracks] = useState({}); // keyed by playlist id
+  const [tracks, setTracks] = useState({});
   const [loadingTab, setLoadingTab] = useState({});
   const [showAdd, setShowAdd] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
   const { currentTrack, playing } = playerState;
   const isAudioTrack = !!currentTrack?.audio_url;
-  const [volume, setVolume] = useState(
-  Number(localStorage.getItem('musicVolume')) || 80
-  );
-  const [playMode, setPlayMode] = useState('queue');   // 'queue' | 'shuffle' | 'repeat'
-  const [queue, setQueue] = useState([]);              // ordered play queue
-  const [showQueue, setShowQueue] = useState(false);   // queue panel visible
 
-  // Build queue from current tab whenever tab or tracks change
+  const [volume, setVolume] = useState(Number(localStorage.getItem('musicVolume')) || 80);
+  const [playMode, setPlayMode] = useState('queue');
+  const [queue, setQueue] = useState([]);
+  const [showQueue, setShowQueue] = useState(false);
+
+  // ─────────────────────────────────────────────────────────────────
+  // THE FIX: A single <audio> element that ALWAYS lives in the DOM.
+  // We never unmount it — only change its src. This way switching
+  // tabs (or any re-render) cannot interrupt playback.
+  // ─────────────────────────────────────────────────────────────────
+  const audioRef = useRef(null);
+  const [progress, setProgress] = useState(0);
+  const [duration, setDuration] = useState(0);
+
+  // Sync src whenever the current audio track changes
+  useEffect(() => {
+    const el = audioRef.current;
+    if (!el) return;
+    const newSrc = currentTrack?.audio_url || '';
+    if (el.src !== newSrc) {
+      el.src = newSrc;
+      setProgress(0);
+      setDuration(0);
+    }
+  }, [currentTrack?.audio_url]);
+
+  // Sync play/pause
+  useEffect(() => {
+    const el = audioRef.current;
+    if (!el) return;
+    if (!currentTrack?.audio_url) { el.pause(); return; }
+    el.volume = volume / 100;
+    if (playing) el.play().catch(() => {});
+    else el.pause();
+  }, [playing, currentTrack?.audio_url]);
+
+  // Sync volume live
+  useEffect(() => {
+    if (audioRef.current) audioRef.current.volume = volume / 100;
+  }, [volume]);
+
+  // Persist volume
+  useEffect(() => { localStorage.setItem('musicVolume', volume); }, [volume]);
+
+  function handleSeek(val) {
+    setProgress(val);
+    if (audioRef.current && duration) {
+      audioRef.current.currentTime = (val / 100) * duration;
+    }
+    onPlayerChange({ currentTrack, playing, volume, seekPct: val });
+  }
+
+  function formatTime(sec) {
+    if (!sec || isNaN(sec)) return '0:00';
+    const m = Math.floor(sec / 60);
+    const s = Math.floor(sec % 60);
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  }
+
+  // Build queue from tab
   useEffect(() => {
     const list = getAllTracksForTab(tab);
     setQueue(list.map((t, i) => ({ ...t, _qi: i })));
   }, [tab, tracks]);
-  useEffect(() => {
-  localStorage.setItem('musicVolume', volume);
-}, [volume]);
 
   function cyclePlayMode() {
     setPlayMode(m => m === 'queue' ? 'shuffle' : m === 'shuffle' ? 'repeat' : 'queue');
   }
-
   function playModeIcon() {
     if (playMode === 'shuffle') return '⇄';
     if (playMode === 'repeat')  return '↻';
@@ -352,7 +375,6 @@ export default function Music({ playerState, onPlayerChange }) {
       });
       return others.length ? others[Math.floor(Math.random() * others.length)] : list[0];
     }
-    // queue mode
     const idx = list.findIndex(t => {
       const ytId = t.youtubeId || t.youtube_id;
       return currentTrack && ((ytId && currentTrack.youtubeId === ytId) || (t.audio_url && currentTrack.audio_url === t.audio_url));
@@ -380,43 +402,11 @@ export default function Music({ playerState, onPlayerChange }) {
   }
 
   function handleVolumeChange(val) {
-  setVolume(val);
-
-  // Uploaded/local files
-  if (audioRef2.current) {
-    audioRef2.current.volume = val / 100;
+    setVolume(val);
+    onPlayerChange({ currentTrack, playing, volume: val });
   }
 
-  // YouTube/global
-  onPlayerChange({
-    currentTrack,
-    playing,
-    volume: val
-  });
-}
-
-  // ── Seek / progress for HTML5 audio tracks ──
-  const [progress, setProgress] = useState(0);   // 0–100
-  const [duration, setDuration] = useState(0);
-  const audioRef2 = useRef(null);  // shared ref passed down
-
-  function handleSeek(val) {
-    setProgress(val);
-    if (audioRef2.current && duration) {
-      audioRef2.current.currentTime = (val / 100) * duration;
-    }
-    // For YouTube we can only approximate — pass to parent
-    onPlayerChange({ currentTrack, playing, volume, seekPct: val });
-  }
-
-  function formatTime(sec) {
-    if (!sec || isNaN(sec)) return '0:00';
-    const m = Math.floor(sec / 60);
-    const s = Math.floor(sec % 60);
-    return `${m}:${s.toString().padStart(2, '0')}`;
-  }
-
-  // Online/offline detection
+  // Online/offline
   useEffect(() => {
     const on = () => setIsOnline(true);
     const off = () => setIsOnline(false);
@@ -425,19 +415,14 @@ export default function Music({ playerState, onPlayerChange }) {
     return () => { window.removeEventListener('online', on); window.removeEventListener('offline', off); };
   }, []);
 
-  // Auto-fallback to audio when offline and playing YouTube
   useEffect(() => {
     if (!isOnline && playing && currentTrack && !currentTrack.audio_url) {
-      // find a track with audio_url in current playlist
       const playlistTracks = getAllTracksForTab(tab);
       const fallback = playlistTracks.find(t => t.audio_url);
-      if (fallback) {
-        playTrack(fallback, getTabColor(tab));
-      }
+      if (fallback) playTrack(fallback, getTabColor(tab));
     }
   }, [isOnline]);
 
-  // Load tracks for a tab
   async function ensureTabLoaded(tabId) {
     if (tracks[tabId] !== undefined || loadingTab[tabId]) return;
     setLoadingTab(prev => ({ ...prev, [tabId]: true }));
@@ -452,23 +437,18 @@ export default function Music({ playerState, onPlayerChange }) {
     const dbTracks = tracks[tabId] || [];
     if (tabId === 'my') return dbTracks;
     const seed = CURATED_SEED[tabId] || [];
-    // Merge: seed first, then user-added (avoid dupe youtube ids)
     const seedIds = new Set(seed.map(t => t.youtubeId));
     const userAdded = dbTracks.filter(t => !seedIds.has(t.youtube_id));
     return [...seed, ...userAdded];
   }
 
   function getTabColor(tabId) {
-    if (tabId === 'my') return '#FF78C4';
-    return CURATED.find(p => p.id === tabId)?.color || '#00D9FF';
+    if (tabId === 'my') return '#C8A96E';
+    return CURATED.find(p => p.id === tabId)?.color || '#C8A96E';
   }
 
   function playTrack(track, color) {
-    const t = {
-      ...track,
-      youtubeId: track.youtubeId || track.youtube_id,
-      color,
-    };
+    const t = { ...track, youtubeId: track.youtubeId || track.youtube_id, color };
     onPlayerChange({ currentTrack: t, playing: true });
   }
 
@@ -498,58 +478,47 @@ export default function Music({ playerState, onPlayerChange }) {
 
   return (
     <div className="music-page">
-      {/* Ambient background orbs */}
+      {/* ── ALWAYS-MOUNTED audio element — the key fix ── */}
+      {/* It lives outside any conditional, so it never unmounts when tabs change */}
+      <audio
+        ref={audioRef}
+        style={{ display: 'none' }}
+        onEnded={() => {
+          setProgress(0);
+          if (playMode === 'repeat' && audioRef.current) {
+            audioRef.current.currentTime = 0;
+            audioRef.current.play().catch(() => {});
+            return;
+          }
+          const next = getNextTrack(1);
+          if (next) playTrack(next, getTabColor(tab));
+          else onPlayerChange({ currentTrack: null, playing: false });
+        }}
+        onTimeUpdate={() => {
+          const el = audioRef.current;
+          if (el && el.duration) setProgress((el.currentTime / el.duration) * 100);
+        }}
+        onLoadedMetadata={() => {
+          if (audioRef.current) setDuration(audioRef.current.duration);
+        }}
+      />
+
       <div className="music-bg-orb-1" />
       <div className="music-bg-orb-2" />
-
-      {/* HTML5 audio for uploaded files — works in background */}
-      {currentTrack?.audio_url && (
-        <AudioPlayer
-          src={currentTrack.audio_url}
-          playing={playing}
-          volume={volume}
-          audioRef={audioRef2}
-          onEnded={() => {
-           setProgress(0);
-
-  // Repeat current uploaded track
-  if (playMode === 'repeat' && audioRef2.current) {
-    audioRef2.current.currentTime = 0;
-    setProgress(0);
-    audioRef2.current.play().catch(() => {});
-    return;
-  }
-
-  const next = getNextTrack(1);
-
-  if (next) {
-    playTrack(next, getTabColor(tab));
-  } else {
-    onPlayerChange({
-      currentTrack: null,
-      playing: false
-    });
-  }
-}}
-          onTimeUpdate={(t, d) => { if (d) setProgress((t / d) * 100); }}
-          onDuration={d => setDuration(d)}
-        />
-      )}
-
-      {/* YouTube is handled globally in App.js */}
+      <div className="music-bg-grain" />
 
       {/* Header */}
       <div className="music-header animate-fadeup">
         <div className="music-header-top">
           <div>
-            <div className="page-title">SOUND</div>
-            <div className="page-subtitle">
-              Your frequency. Your library.
+            <div className="page-title">
+              SOUND
               {!isOnline && <span className="offline-badge">● OFFLINE</span>}
             </div>
+            <div className="page-subtitle">Your frequency. Your library.</div>
           </div>
           <button className="add-track-btn" onClick={() => setShowAdd(true)}>
-            <span>＋</span> ADD
+            <span className="add-btn-plus">＋</span> ADD TRACK
           </button>
         </div>
 
@@ -557,7 +526,7 @@ export default function Music({ playerState, onPlayerChange }) {
           <button
             className={`music-tab ${tab === 'my' ? 'music-tab--active' : ''}`}
             onClick={() => setTab('my')}
-            style={{ '--tc': '#FF78C4' }}
+            style={{ '--tc': '#C8A96E' }}
           >
             ♥ MY LIBRARY
           </button>
@@ -574,16 +543,15 @@ export default function Music({ playerState, onPlayerChange }) {
         </div>
       </div>
 
-      {/* Now Playing Bar — fixed bottom */}
+      {/* Now Playing Bar */}
       {currentTrack && (
-        <div className="now-playing-bar" style={{ '--np-color': currentTrack.color }}>
+        <div className="now-playing-bar" style={{ '--np-color': currentTrack.color || '#C8A96E' }}>
           <div className="np-glow-strip" />
           <div className="np-color-wash" />
 
-          {/* Seek bar — only for uploaded audio files (YouTube can't be seeked via embed) */}
           {isAudioTrack && (
             <div className="np-seek-row">
-              <span className="np-time">{formatTime((progress/100)*duration)}</span>
+              <span className="np-time">{formatTime((progress / 100) * duration)}</span>
               <input
                 type="range"
                 className="np-seek-slider"
@@ -596,47 +564,41 @@ export default function Music({ playerState, onPlayerChange }) {
             </div>
           )}
 
-          {/* Main row: thumb + info + controls + volume */}
           <div className="np-main-row">
-            {/* Thumb */}
             {currentTrack.thumb ? (
               <img src={currentTrack.thumb} alt="" className="np-thumb" />
             ) : (
-              <div className="np-thumb np-thumb--audio">🎵</div>
+              <div className="np-thumb np-thumb--audio">♪</div>
             )}
 
-            {/* Info */}
             <div className="np-info">
               <div className="np-title">{currentTrack.title}</div>
               <div className="np-artist">
-                {currentTrack.audio_url ? '📁 ' : '▶ '}{currentTrack.artist}
-                {!isOnline && currentTrack.audio_url && <span style={{ marginLeft: 6, opacity: 0.6 }}>· offline</span>}
+                {currentTrack.audio_url ? '↑ ' : '▶ '}{currentTrack.artist}
+                {!isOnline && currentTrack.audio_url && <span className="np-offline-tag">offline</span>}
               </div>
             </div>
 
-            {/* EQ indicator */}
-            {playing && <EqBars color={currentTrack.color} />}
+            {playing && <EqBars color={currentTrack.color || '#C8A96E'} />}
 
-            {/* Controls */}
             <div className="np-controls">
-              <button className="np-mode-btn" onClick={cyclePlayMode} title={playModeLabel()} style={{ color: playMode !== 'queue' ? currentTrack.color : undefined }}>
+              <button className="np-mode-btn" onClick={cyclePlayMode} title={playModeLabel()} style={{ color: playMode !== 'queue' ? (currentTrack.color || '#C8A96E') : undefined }}>
                 {playModeIcon()}
               </button>
               <button className="np-skip-btn" onClick={() => skipTrack(-1)} title="Previous">⏮</button>
               <button
                 className="np-play-btn"
                 onClick={togglePlay}
-                style={{ background: currentTrack.color, color: '#000' }}
+                style={{ '--btn-color': currentTrack.color || '#C8A96E' }}
               >
                 {playing ? '⏸' : '▶'}
               </button>
               <button className="np-skip-btn" onClick={() => skipTrack(1)} title="Next">⏭</button>
-              <button className="np-queue-btn" onClick={() => setShowQueue(q => !q)} title="Queue" style={{ color: showQueue ? currentTrack.color : undefined }}>
+              <button className="np-queue-btn" onClick={() => setShowQueue(q => !q)} title="Queue" style={{ color: showQueue ? (currentTrack.color || '#C8A96E') : undefined }}>
                 ☰
               </button>
             </div>
 
-            {/* Volume — desktop only */}
             <div className="np-volume-wrap">
               <span className="np-volume-icon">{volume === 0 ? '🔇' : volume < 50 ? '🔉' : '🔊'}</span>
               <input
@@ -661,7 +623,7 @@ export default function Music({ playerState, onPlayerChange }) {
                 <button
                   key={m}
                   className={`queue-mode-tab ${playMode === m ? 'queue-mode-tab--active' : ''}`}
-                  style={{ '--qc': currentTrack.color }}
+                  style={{ '--qc': currentTrack.color || '#C8A96E' }}
                   onClick={() => setPlayMode(m)}
                 >
                   {m === 'queue' ? '≡ QUEUE' : m === 'shuffle' ? '⇄ SHUFFLE' : '↻ REPEAT'}
@@ -679,13 +641,13 @@ export default function Music({ playerState, onPlayerChange }) {
                 (t.audio_url && currentTrack.audio_url === t.audio_url)
               );
               return (
-                <div key={t.id || i} className={`queue-item ${isActive ? 'queue-item--active' : ''}`} style={{ '--qc': currentTrack.color }}>
+                <div key={t.id || i} className={`queue-item ${isActive ? 'queue-item--active' : ''}`} style={{ '--qc': currentTrack.color || '#C8A96E' }}>
                   <span className="queue-num">{isActive ? '▶' : i + 1}</span>
                   {t.thumb
                     ? <img src={t.thumb} alt="" className="queue-thumb" />
-                    : <div className="queue-thumb queue-thumb--audio">🎵</div>
+                    : <div className="queue-thumb queue-thumb--audio">♪</div>
                   }
-                  <div className="queue-info" onClick={() => { playTrack(t, getTabColor(tab)); }}>
+                  <div className="queue-info" onClick={() => playTrack(t, getTabColor(tab))}>
                     <div className="queue-item-title">{t.title}</div>
                     <div className="queue-item-artist">{t.artist}</div>
                   </div>
@@ -701,9 +663,8 @@ export default function Music({ playerState, onPlayerChange }) {
         </div>
       )}
 
-      {/* Track list */}
+      {/* Track List */}
       <div className="track-list-section animate-fadeup-1">
-        {/* Empty state */}
         {tab === 'my' && !isLoading && displayTracks.length === 0 && (
           <div className="empty-library">
             <div className="empty-icon">♪</div>
@@ -716,7 +677,9 @@ export default function Music({ playerState, onPlayerChange }) {
         )}
 
         {isLoading && (
-          <div className="music-loading"><div className="spinner" /></div>
+          <div className="music-loading">
+            <div className="spinner" />
+          </div>
         )}
 
         {displayTracks.map((track, i) => {
@@ -725,34 +688,35 @@ export default function Music({ playerState, onPlayerChange }) {
             (ytId && currentTrack.youtubeId === ytId) ||
             (track.audio_url && currentTrack.audio_url === track.audio_url)
           );
-          const isUserAdded = !!track.id && typeof track.id === 'string' && track.id.includes('-');
 
           return (
             <div
               key={track.id || i}
               className={`track-row ${isActive ? 'track-row--active' : ''}`}
-              style={{ '--tr-color': tabColor }}
+              style={{ '--tr-color': tabColor, animationDelay: `${i * 0.04}s` }}
             >
+              <div className="track-row-num">{isActive && playing ? <EqBars color={tabColor} /> : <span>{i + 1}</span>}</div>
+
               <div className="track-row-thumb-wrap" onClick={() => playTrack(track, tabColor)}>
                 {track.thumb ? (
                   <img src={track.thumb} alt="" className="track-row-thumb" />
                 ) : (
-                  <div className="track-row-thumb track-row-thumb--audio">🎵</div>
+                  <div className="track-row-thumb track-row-thumb--audio">♪</div>
                 )}
                 <div className="track-row-play-overlay">
-                  {isActive && playing ? <EqBars color={tabColor} /> : <span className="track-row-play-icon">▶</span>}
+                  <span className="track-row-play-icon">▶</span>
                 </div>
               </div>
+
               <div className="track-row-info" onClick={() => playTrack(track, tabColor)}>
                 <div className="track-row-title">{track.title}</div>
                 <div className="track-row-artist">
-                  {track.audio_url && <span style={{ marginRight: 4 }}>📁</span>}
+                  {track.audio_url && <span className="track-local-tag">LOCAL</span>}
                   {track.artist}
                 </div>
               </div>
+
               <div className="track-row-actions">
-                {isActive && playing && <div className="track-row-active-dot" style={{ background: tabColor }} />}
-                {/* Show delete for user-added tracks (not seed) */}
                 {track.id && !track.id.toString().startsWith('c') && (
                   <button className="track-delete-btn" onClick={() => handleDelete(track)}>✕</button>
                 )}
@@ -761,7 +725,6 @@ export default function Music({ playerState, onPlayerChange }) {
           );
         })}
 
-        {/* Add to curated playlist CTA */}
         {tab !== 'my' && !isLoading && (
           <div className="add-to-playlist-cta">
             <button className="add-track-btn add-track-btn--big" style={{ '--bc': tabColor }} onClick={() => setShowAdd(true)}>
