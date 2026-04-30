@@ -39,8 +39,8 @@ function App() {
     <div className="app">
       <div className="noise-overlay" />
 
-      {/* Hidden YouTube player — keeps playing across all views */}
-      {playerState.currentTrack && playerState.playing && (
+      {/* Hidden YouTube player — keeps playing across all views, only for YT tracks */}
+      {playerState.currentTrack && playerState.playing && playerState.currentTrack.youtubeId && !playerState.currentTrack.audio_url && (
         <div style={{ position: 'fixed', width: 1, height: 1, overflow: 'hidden', opacity: 0, top: -999, left: -999, pointerEvents: 'none' }}>
           <iframe
             key={playerState.currentTrack.youtubeId}
