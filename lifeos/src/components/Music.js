@@ -384,6 +384,10 @@ export default function Music({ playerState, onPlayerChange }) {
 
   return (
     <div className="music-page">
+      {/* Ambient background orbs */}
+      <div className="music-bg-orb-1" />
+      <div className="music-bg-orb-2" />
+
       {/* HTML5 audio for uploaded files — works in background */}
       {isAudioTrack && (
         <AudioPlayer
@@ -393,17 +397,7 @@ export default function Music({ playerState, onPlayerChange }) {
         />
       )}
 
-      {/* YouTube iframe for YT tracks */}
-      {!isAudioTrack && currentTrack?.youtubeId && playing && isOnline && (
-        <div className="yt-hidden">
-          <iframe
-            key={currentTrack.youtubeId}
-            src={`https://www.youtube.com/embed/${currentTrack.youtubeId}?autoplay=1&controls=0&modestbranding=1`}
-            allow="autoplay"
-            title="player"
-          />
-        </div>
-      )}
+      {/* YouTube is handled globally in App.js */}
 
       {/* Header */}
       <div className="music-header animate-fadeup">
@@ -444,6 +438,8 @@ export default function Music({ playerState, onPlayerChange }) {
       {/* Now Playing Bar */}
       {currentTrack && (
         <div className="now-playing-bar animate-fadeup" style={{ '--np-color': currentTrack.color }}>
+          <div className="np-glow-strip" />
+          <div className="np-color-wash" />
           {currentTrack.thumb ? (
             <img src={currentTrack.thumb} alt="" className="np-thumb" />
           ) : (
