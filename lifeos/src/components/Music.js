@@ -2,51 +2,45 @@ import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import './Music.css';
 
-// ── Default curated playlists (built-in, not from DB) ──
+const BUCKET = 'audio-tracks';
+
 const CURATED = [
-  {
-    id: 'focus', label: 'DEEP FOCUS', icon: '🧠', color: '#00D9FF',
-    tracks: [
-      { id: 'c1', title: 'Lo-Fi Hip Hop Radio', artist: 'Lofi Girl', youtubeId: 'jfKfPfyJRdk', thumb: 'https://img.youtube.com/vi/jfKfPfyJRdk/mqdefault.jpg' },
-      { id: 'c2', title: 'Dark Academia Study', artist: 'Aesthetic Vibes', youtubeId: '7NOSDKb0HlU', thumb: 'https://img.youtube.com/vi/7NOSDKb0HlU/mqdefault.jpg' },
-      { id: 'c3', title: 'Dark Lo-Fi Beats', artist: 'ChillHop', youtubeId: 'S_MOd40zlYU', thumb: 'https://img.youtube.com/vi/S_MOd40zlYU/mqdefault.jpg' },
-    ],
-  },
-  {
-    id: 'gym', label: 'GYM MODE', icon: '💪', color: '#FF6B35',
-    tracks: [
-      { id: 'c4', title: 'Workout Motivation', artist: 'Various', youtubeId: 'Y8RKTnOqOFs', thumb: 'https://img.youtube.com/vi/Y8RKTnOqOFs/mqdefault.jpg' },
-      { id: 'c5', title: 'Hard Trap Beats', artist: 'Trap Nation', youtubeId: 'Q3y-80HBM6Q', thumb: 'https://img.youtube.com/vi/Q3y-80HBM6Q/mqdefault.jpg' },
-      { id: 'c6', title: 'Beast Mode Hip Hop', artist: 'Various', youtubeId: 'pMRbplROKEM', thumb: 'https://img.youtube.com/vi/pMRbplROKEM/mqdefault.jpg' },
-    ],
-  },
-  {
-    id: 'grind', label: 'LATE NIGHT GRIND', icon: '🌙', color: '#A8FF78',
-    tracks: [
-      { id: 'c7', title: 'Night Owl Lo-Fi', artist: 'Lofi Girl', youtubeId: 'rUxyKA_-grg', thumb: 'https://img.youtube.com/vi/rUxyKA_-grg/mqdefault.jpg' },
-      { id: 'c8', title: 'Midnight Study Beats', artist: 'Various', youtubeId: 'n61ULEU7CO0', thumb: 'https://img.youtube.com/vi/n61ULEU7CO0/mqdefault.jpg' },
-      { id: 'c9', title: 'Chill Trap Night', artist: 'Various', youtubeId: 'H-aHaFMVkQU', thumb: 'https://img.youtube.com/vi/H-aHaFMVkQU/mqdefault.jpg' },
-    ],
-  },
-  {
-    id: 'boss', label: 'BOSS MINDSET', icon: '📈', color: '#FFD700',
-    tracks: [
-      { id: 'c10', title: 'Jazz & Coffee', artist: 'Café Music', youtubeId: 'DSGyEsJ17cI', thumb: 'https://img.youtube.com/vi/DSGyEsJ17cI/mqdefault.jpg' },
-      { id: 'c11', title: 'Smooth Executive', artist: 'Various', youtubeId: 'lTRiuFIWV54', thumb: 'https://img.youtube.com/vi/lTRiuFIWV54/mqdefault.jpg' },
-      { id: 'c12', title: 'Entrepreneur Mix', artist: 'Various', youtubeId: 'ZXsQAXx_ao0', thumb: 'https://img.youtube.com/vi/ZXsQAXx_ao0/mqdefault.jpg' },
-    ],
-  },
+  { id: 'focus', label: 'DEEP FOCUS', icon: '🧠', color: '#00D9FF' },
+  { id: 'gym',   label: 'GYM MODE',   icon: '💪', color: '#FF6B35' },
+  { id: 'grind', label: 'LATE NIGHT GRIND', icon: '🌙', color: '#A8FF78' },
+  { id: 'boss',  label: 'BOSS MINDSET', icon: '📈', color: '#FFD700' },
 ];
+
+// Built-in curated tracks (fallback / seed)
+const CURATED_SEED = {
+  focus: [
+    { id: 'c1', title: 'Lo-Fi Hip Hop Radio', artist: 'Lofi Girl', youtubeId: 'jfKfPfyJRdk', thumb: 'https://img.youtube.com/vi/jfKfPfyJRdk/mqdefault.jpg', playlist: 'focus' },
+    { id: 'c2', title: 'Dark Academia Study',  artist: 'Aesthetic Vibes', youtubeId: '7NOSDKb0HlU', thumb: 'https://img.youtube.com/vi/7NOSDKb0HlU/mqdefault.jpg', playlist: 'focus' },
+    { id: 'c3', title: 'Dark Lo-Fi Beats',     artist: 'ChillHop', youtubeId: 'S_MOd40zlYU', thumb: 'https://img.youtube.com/vi/S_MOd40zlYU/mqdefault.jpg', playlist: 'focus' },
+  ],
+  gym: [
+    { id: 'c4', title: 'Workout Motivation', artist: 'Various',      youtubeId: 'Y8RKTnOqOFs', thumb: 'https://img.youtube.com/vi/Y8RKTnOqOFs/mqdefault.jpg', playlist: 'gym' },
+    { id: 'c5', title: 'Hard Trap Beats',    artist: 'Trap Nation',  youtubeId: 'Q3y-80HBM6Q', thumb: 'https://img.youtube.com/vi/Q3y-80HBM6Q/mqdefault.jpg', playlist: 'gym' },
+    { id: 'c6', title: 'Beast Mode Hip Hop', artist: 'Various',      youtubeId: 'pMRbplROKEM', thumb: 'https://img.youtube.com/vi/pMRbplROKEM/mqdefault.jpg', playlist: 'gym' },
+  ],
+  grind: [
+    { id: 'c7', title: 'Night Owl Lo-Fi',     artist: 'Lofi Girl', youtubeId: 'rUxyKA_-grg', thumb: 'https://img.youtube.com/vi/rUxyKA_-grg/mqdefault.jpg', playlist: 'grind' },
+    { id: 'c8', title: 'Midnight Study Beats', artist: 'Various',  youtubeId: 'n61ULEU7CO0', thumb: 'https://img.youtube.com/vi/n61ULEU7CO0/mqdefault.jpg', playlist: 'grind' },
+    { id: 'c9', title: 'Chill Trap Night',    artist: 'Various',   youtubeId: 'H-aHaFMVkQU', thumb: 'https://img.youtube.com/vi/H-aHaFMVkQU/mqdefault.jpg', playlist: 'grind' },
+  ],
+  boss: [
+    { id: 'c10', title: 'Jazz & Coffee',      artist: 'Café Music', youtubeId: 'DSGyEsJ17cI', thumb: 'https://img.youtube.com/vi/DSGyEsJ17cI/mqdefault.jpg', playlist: 'boss' },
+    { id: 'c11', title: 'Smooth Executive',   artist: 'Various',    youtubeId: 'lTRiuFIWV54', thumb: 'https://img.youtube.com/vi/lTRiuFIWV54/mqdefault.jpg', playlist: 'boss' },
+    { id: 'c12', title: 'Entrepreneur Mix',   artist: 'Various',    youtubeId: 'ZXsQAXx_ao0', thumb: 'https://img.youtube.com/vi/ZXsQAXx_ao0/mqdefault.jpg', playlist: 'boss' },
+  ],
+};
 
 function extractYouTubeId(url) {
   const patterns = [
     /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,
     /^([a-zA-Z0-9_-]{11})$/,
   ];
-  for (const p of patterns) {
-    const m = url.match(p);
-    if (m) return m[1];
-  }
+  for (const p of patterns) { const m = url.match(p); if (m) return m[1]; }
   return null;
 }
 
@@ -60,37 +54,37 @@ async function fetchYouTubeTitle(videoId) {
 }
 
 // ── Supabase helpers ──
-async function loadMyTracks() {
+async function loadTracks(playlist) {
   try {
-    const { data } = await supabase.from('my_tracks').select('*').order('created_at', { ascending: false });
+    const { data } = await supabase.from('my_tracks').select('*').eq('playlist', playlist).order('created_at', { ascending: false });
     return data || [];
   } catch { return []; }
 }
 
-async function addMyTrack(track) {
+async function addTrack(track) {
   const { data, error } = await supabase.from('my_tracks').insert(track).select().single();
   if (error) throw error;
   return data;
 }
 
-async function deleteMyTrack(id) {
+async function deleteTrack(id, audioUrl) {
+  if (audioUrl) {
+    const path = audioUrl.split(`/${BUCKET}/`)[1];
+    if (path) await supabase.storage.from(BUCKET).remove([path]);
+  }
   await supabase.from('my_tracks').delete().eq('id', id);
 }
 
-async function getSavedState() {
-  try {
-    const { data } = await supabase.from('music_state').select('*').eq('id', 1).single();
-    return data;
-  } catch { return null; }
+async function uploadAudio(file) {
+  const ext = file.name.split('.').pop();
+  const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+  const { error } = await supabase.storage.from(BUCKET).upload(path, file, { contentType: file.type });
+  if (error) throw error;
+  const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
+  return data.publicUrl;
 }
 
-async function saveState(state) {
-  try {
-    await supabase.from('music_state').upsert({ id: 1, ...state, updated_at: new Date().toISOString() }, { onConflict: 'id' });
-  } catch {}
-}
-
-// ── Equalizer animation ──
+// ── Equalizer ──
 function EqBars({ color }) {
   return (
     <div className="eq-bars">
@@ -102,13 +96,19 @@ function EqBars({ color }) {
 }
 
 // ── Add Track Modal ──
-function AddTrackModal({ onAdd, onClose }) {
+function AddTrackModal({ targetPlaylist, onAdd, onClose }) {
+  const [mode, setMode] = useState('youtube'); // 'youtube' | 'file'
   const [url, setUrl] = useState('');
   const [title, setTitle] = useState('');
   const [artist, setArtist] = useState('');
+  const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [fetched, setFetched] = useState(false);
   const [error, setError] = useState('');
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const fileRef = useRef();
+
+  const pl = CURATED.find(p => p.id === targetPlaylist) || { label: 'MY LIBRARY', color: '#FF78C4' };
 
   async function handleFetch() {
     const id = extractYouTubeId(url.trim());
@@ -116,70 +116,140 @@ function AddTrackModal({ onAdd, onClose }) {
     setLoading(true); setError('');
     const info = await fetchYouTubeTitle(id);
     if (info) { setTitle(info.title); setArtist(info.artist); setFetched(true); }
-    else { setTitle(''); setFetched(false); setError('Could not fetch title. Fill it in manually.'); }
+    else { setFetched(false); setError('Could not fetch title — fill it in manually.'); }
     setLoading(false);
   }
 
   async function handleSave() {
-    const id = extractYouTubeId(url.trim());
-    if (!id || !title.trim()) { setError('Need a valid link and title'); return; }
-    setLoading(true);
-    try {
-      const track = {
-        youtube_id: id,
-        title: title.trim(),
-        artist: artist.trim() || 'Unknown',
-        thumb: `https://img.youtube.com/vi/${id}/mqdefault.jpg`,
-        created_at: new Date().toISOString(),
-      };
-      const saved = await addMyTrack(track);
-      onAdd({ ...track, id: saved.id });
-      onClose();
-    } catch { setError('Failed to save. Check Supabase.'); }
-    setLoading(false);
+    setError('');
+    if (mode === 'youtube') {
+      const id = extractYouTubeId(url.trim());
+      if (!id || !title.trim()) { setError('Need a valid link and title'); return; }
+      setLoading(true);
+      try {
+        const track = {
+          youtube_id: id,
+          title: title.trim(),
+          artist: artist.trim() || 'Unknown',
+          thumb: `https://img.youtube.com/vi/${id}/mqdefault.jpg`,
+          playlist: targetPlaylist,
+          created_at: new Date().toISOString(),
+        };
+        const saved = await addTrack(track);
+        onAdd({ ...track, id: saved.id, youtubeId: id });
+        onClose();
+      } catch { setError('Failed to save. Check Supabase.'); }
+      setLoading(false);
+    } else {
+      if (!file || !title.trim()) { setError('Choose a file and enter a title'); return; }
+      setLoading(true);
+      try {
+        setUploadProgress(10);
+        const audioUrl = await uploadAudio(file);
+        setUploadProgress(80);
+        const track = {
+          title: title.trim(),
+          artist: artist.trim() || 'Unknown',
+          thumb: null,
+          audio_url: audioUrl,
+          playlist: targetPlaylist,
+          created_at: new Date().toISOString(),
+        };
+        const saved = await addTrack(track);
+        setUploadProgress(100);
+        onAdd({ ...track, id: saved.id });
+        onClose();
+      } catch (e) { setError('Upload failed: ' + e.message); }
+      setLoading(false);
+    }
   }
+
+  const ytId = mode === 'youtube' ? extractYouTubeId(url) : null;
 
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-card" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
-          <span className="modal-title">ADD TRACK</span>
+          <div>
+            <span className="modal-title">ADD TRACK</span>
+            <span className="modal-playlist-badge" style={{ '--pc': pl.color }}>{pl.label}</span>
+          </div>
           <button className="modal-close" onClick={onClose}>✕</button>
         </div>
+
+        {/* Mode toggle */}
+        <div className="modal-mode-toggle">
+          <button className={`mode-btn ${mode === 'youtube' ? 'mode-btn--active' : ''}`} onClick={() => setMode('youtube')}>▶ YouTube</button>
+          <button className={`mode-btn ${mode === 'file' ? 'mode-btn--active' : ''}`} onClick={() => setMode('file')}>📁 Upload File</button>
+        </div>
+
         <div className="modal-body">
-          <label className="modal-label">YOUTUBE LINK</label>
-          <div className="modal-input-row">
-            <input
-              className="modal-input"
-              placeholder="https://youtube.com/watch?v=..."
-              value={url}
-              onChange={e => { setUrl(e.target.value); setFetched(false); setError(''); }}
-            />
-            <button className="modal-fetch-btn" onClick={handleFetch} disabled={loading || !url.trim()}>
-              {loading ? <span className="spinner" style={{ width: 14, height: 14 }} /> : 'FETCH'}
-            </button>
-          </div>
+          {mode === 'youtube' ? (
+            <>
+              <label className="modal-label">YOUTUBE LINK</label>
+              <div className="modal-input-row">
+                <input
+                  className="modal-input"
+                  placeholder="https://youtube.com/watch?v=..."
+                  value={url}
+                  onChange={e => { setUrl(e.target.value); setFetched(false); setError(''); }}
+                />
+                <button className="modal-fetch-btn" onClick={handleFetch} disabled={loading || !url.trim()}>
+                  {loading ? <span className="spinner" style={{ width: 14, height: 14 }} /> : 'FETCH'}
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <label className="modal-label">AUDIO FILE</label>
+              <div
+                className={`file-drop-zone ${file ? 'file-drop-zone--has-file' : ''}`}
+                onClick={() => fileRef.current?.click()}
+                onDragOver={e => e.preventDefault()}
+                onDrop={e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) { setFile(f); if (!title) setTitle(f.name.replace(/\.[^.]+$/, '')); } }}
+              >
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="audio/*"
+                  style={{ display: 'none' }}
+                  onChange={e => { const f = e.target.files[0]; if (f) { setFile(f); if (!title) setTitle(f.name.replace(/\.[^.]+$/, '')); } }}
+                />
+                {file ? (
+                  <div className="file-info">
+                    <span className="file-icon">🎵</span>
+                    <div>
+                      <div className="file-name">{file.name}</div>
+                      <div className="file-size">{(file.size / 1024 / 1024).toFixed(1)} MB</div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="file-placeholder">
+                    <span style={{ fontSize: 28 }}>📂</span>
+                    <div>Tap to choose or drag & drop</div>
+                    <div style={{ fontSize: 10, opacity: 0.5, marginTop: 4 }}>MP3, WAV, M4A, OGG supported</div>
+                  </div>
+                )}
+              </div>
+              {loading && uploadProgress > 0 && (
+                <div className="upload-progress-bar">
+                  <div className="upload-progress-fill" style={{ width: `${uploadProgress}%` }} />
+                </div>
+              )}
+            </>
+          )}
+
           {error && <div className="modal-error">{error}</div>}
 
           <label className="modal-label" style={{ marginTop: 14 }}>TITLE</label>
-          <input
-            className="modal-input"
-            placeholder="Track name"
-            value={title}
-            onChange={e => setTitle(e.target.value)}
-          />
+          <input className="modal-input" placeholder="Track name" value={title} onChange={e => setTitle(e.target.value)} />
 
           <label className="modal-label" style={{ marginTop: 14 }}>ARTIST</label>
-          <input
-            className="modal-input"
-            placeholder="Artist / channel"
-            value={artist}
-            onChange={e => setArtist(e.target.value)}
-          />
+          <input className="modal-input" placeholder="Artist / channel" value={artist} onChange={e => setArtist(e.target.value)} />
 
-          {fetched && extractYouTubeId(url) && (
+          {fetched && ytId && (
             <div className="modal-preview">
-              <img src={`https://img.youtube.com/vi/${extractYouTubeId(url)}/mqdefault.jpg`} alt="thumb" className="modal-thumb" />
+              <img src={`https://img.youtube.com/vi/${ytId}/mqdefault.jpg`} alt="thumb" className="modal-thumb" />
               <div>
                 <div className="modal-preview-title">{title}</div>
                 <div className="modal-preview-artist">{artist}</div>
@@ -187,84 +257,184 @@ function AddTrackModal({ onAdd, onClose }) {
             </div>
           )}
         </div>
+
         <button
           className="modal-save-btn"
           onClick={handleSave}
-          disabled={loading || !url.trim() || !title.trim()}
+          disabled={loading || !title.trim() || (mode === 'youtube' ? !url.trim() : !file)}
+          style={{ '--sb-color': pl.color }}
         >
-          {loading ? 'SAVING...' : 'ADD TO LIBRARY →'}
+          {loading ? (mode === 'file' ? `UPLOADING ${uploadProgress}%...` : 'SAVING...') : 'ADD TO LIBRARY →'}
         </button>
       </div>
     </div>
   );
 }
 
-// ── Main Component ──
-export default function Music({ playerState, onPlayerChange }) {
-  const [tab, setTab] = useState('my'); // 'my' | playlist id
-  const [myTracks, setMyTracks] = useState([]);
-  const [showAdd, setShowAdd] = useState(false);
-  const [loadingTracks, setLoadingTracks] = useState(true);
-
-  // Player state lives in App so it persists across view changes
-  const { currentTrack, playing } = playerState;
+// ── Audio Player for uploaded files ──
+function AudioPlayer({ src, playing, onEnded }) {
+  const audioRef = useRef(null);
 
   useEffect(() => {
-    loadMyTracks().then(t => { setMyTracks(t); setLoadingTracks(false); });
-    getSavedState().then(s => {
-      if (s?.youtube_id && !currentTrack) {
-        // restore last played
-        onPlayerChange({ currentTrack: { youtubeId: s.youtube_id, title: s.title, artist: s.artist, thumb: s.thumb, color: s.color || '#00D9FF' }, playing: false });
-      }
-    });
+    if (!audioRef.current) return;
+    if (playing) audioRef.current.play().catch(() => {});
+    else audioRef.current.pause();
+  }, [playing, src]);
+
+  return (
+    <audio
+      ref={audioRef}
+      src={src}
+      onEnded={onEnded}
+      style={{ display: 'none' }}
+    />
+  );
+}
+
+// ── Main Component ──
+export default function Music({ playerState, onPlayerChange }) {
+  const [tab, setTab] = useState('my');
+  const [tracks, setTracks] = useState({}); // keyed by playlist id
+  const [loadingTab, setLoadingTab] = useState({});
+  const [showAdd, setShowAdd] = useState(false);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+  const { currentTrack, playing } = playerState;
+  const isAudioTrack = !!currentTrack?.audio_url;
+
+  // Online/offline detection
+  useEffect(() => {
+    const on = () => setIsOnline(true);
+    const off = () => setIsOnline(false);
+    window.addEventListener('online', on);
+    window.addEventListener('offline', off);
+    return () => { window.removeEventListener('online', on); window.removeEventListener('offline', off); };
   }, []);
 
-  function playTrack(track, color = '#00D9FF') {
-    const t = { ...track, youtubeId: track.youtubeId || track.youtube_id, color };
+  // Auto-fallback to audio when offline and playing YouTube
+  useEffect(() => {
+    if (!isOnline && playing && currentTrack && !currentTrack.audio_url) {
+      // find a track with audio_url in current playlist
+      const playlistTracks = getAllTracksForTab(tab);
+      const fallback = playlistTracks.find(t => t.audio_url);
+      if (fallback) {
+        playTrack(fallback, getTabColor(tab));
+      }
+    }
+  }, [isOnline]);
+
+  // Load tracks for a tab
+  async function ensureTabLoaded(tabId) {
+    if (tracks[tabId] !== undefined || loadingTab[tabId]) return;
+    setLoadingTab(prev => ({ ...prev, [tabId]: true }));
+    const data = await loadTracks(tabId);
+    setTracks(prev => ({ ...prev, [tabId]: data }));
+    setLoadingTab(prev => ({ ...prev, [tabId]: false }));
+  }
+
+  useEffect(() => { ensureTabLoaded(tab); }, [tab]);
+
+  function getAllTracksForTab(tabId) {
+    const dbTracks = tracks[tabId] || [];
+    if (tabId === 'my') return dbTracks;
+    const seed = CURATED_SEED[tabId] || [];
+    // Merge: seed first, then user-added (avoid dupe youtube ids)
+    const seedIds = new Set(seed.map(t => t.youtubeId));
+    const userAdded = dbTracks.filter(t => !seedIds.has(t.youtube_id));
+    return [...seed, ...userAdded];
+  }
+
+  function getTabColor(tabId) {
+    if (tabId === 'my') return '#FF78C4';
+    return CURATED.find(p => p.id === tabId)?.color || '#00D9FF';
+  }
+
+  function playTrack(track, color) {
+    const t = {
+      ...track,
+      youtubeId: track.youtubeId || track.youtube_id,
+      color,
+    };
     onPlayerChange({ currentTrack: t, playing: true });
-    saveState({ youtube_id: t.youtubeId, title: t.title, artist: t.artist, thumb: t.thumb, color });
   }
 
   function togglePlay() {
     onPlayerChange({ currentTrack, playing: !playing });
   }
 
-  function handleDelete(id) {
-    deleteMyTrack(id);
-    setMyTracks(prev => prev.filter(t => t.id !== id));
-    if (currentTrack?.id === id) onPlayerChange({ currentTrack: null, playing: false });
+  function handleDelete(track) {
+    deleteTrack(track.id, track.audio_url);
+    setTracks(prev => ({
+      ...prev,
+      [tab]: (prev[tab] || []).filter(t => t.id !== track.id),
+    }));
+    if (currentTrack?.id === track.id) onPlayerChange({ currentTrack: null, playing: false });
   }
 
-  // All tracks for current tab
-  const curatedPlaylist = CURATED.find(p => p.id === tab);
-  const displayTracks = tab === 'my' ? myTracks : curatedPlaylist?.tracks || [];
-  const tabColor = tab === 'my' ? '#FF78C4' : curatedPlaylist?.color || '#00D9FF';
+  function handleAdd(newTrack) {
+    setTracks(prev => ({
+      ...prev,
+      [newTrack.playlist]: [newTrack, ...(prev[newTrack.playlist] || [])],
+    }));
+  }
+
+  const displayTracks = getAllTracksForTab(tab);
+  const tabColor = getTabColor(tab);
+  const isLoading = loadingTab[tab];
 
   return (
     <div className="music-page">
+      {/* HTML5 audio for uploaded files — works in background */}
+      {isAudioTrack && (
+        <AudioPlayer
+          src={currentTrack.audio_url}
+          playing={playing}
+          onEnded={() => onPlayerChange({ playing: false })}
+        />
+      )}
+
+      {/* YouTube iframe for YT tracks */}
+      {!isAudioTrack && currentTrack?.youtubeId && playing && isOnline && (
+        <div className="yt-hidden">
+          <iframe
+            key={currentTrack.youtubeId}
+            src={`https://www.youtube.com/embed/${currentTrack.youtubeId}?autoplay=1&controls=0&modestbranding=1`}
+            allow="autoplay"
+            title="player"
+          />
+        </div>
+      )}
+
       {/* Header */}
       <div className="music-header animate-fadeup">
         <div className="music-header-top">
           <div>
             <div className="page-title">SOUND</div>
-            <div className="page-subtitle">Your frequency. Your library.</div>
+            <div className="page-subtitle">
+              Your frequency. Your library.
+              {!isOnline && <span className="offline-badge">● OFFLINE</span>}
+            </div>
           </div>
           <button className="add-track-btn" onClick={() => setShowAdd(true)}>
             <span>＋</span> ADD
           </button>
         </div>
 
-        {/* Tab bar */}
         <div className="music-tabs">
-          <button className={`music-tab ${tab === 'my' ? 'music-tab--active' : ''}`}
-            onClick={() => setTab('my')} style={{ '--tc': '#FF78C4' }}>
+          <button
+            className={`music-tab ${tab === 'my' ? 'music-tab--active' : ''}`}
+            onClick={() => setTab('my')}
+            style={{ '--tc': '#FF78C4' }}
+          >
             ♥ MY LIBRARY
           </button>
           {CURATED.map(p => (
-            <button key={p.id}
+            <button
+              key={p.id}
               className={`music-tab ${tab === p.id ? 'music-tab--active' : ''}`}
               onClick={() => setTab(p.id)}
-              style={{ '--tc': p.color }}>
+              style={{ '--tc': p.color }}
+            >
               {p.icon} {p.label}
             </button>
           ))}
@@ -274,48 +444,55 @@ export default function Music({ playerState, onPlayerChange }) {
       {/* Now Playing Bar */}
       {currentTrack && (
         <div className="now-playing-bar animate-fadeup" style={{ '--np-color': currentTrack.color }}>
-          <img src={currentTrack.thumb} alt="" className="np-thumb" />
+          {currentTrack.thumb ? (
+            <img src={currentTrack.thumb} alt="" className="np-thumb" />
+          ) : (
+            <div className="np-thumb np-thumb--audio">🎵</div>
+          )}
           <div className="np-info">
             <div className="np-title">{currentTrack.title}</div>
-            <div className="np-artist">{currentTrack.artist}</div>
+            <div className="np-artist">
+              {currentTrack.audio_url ? '📁 ' : '▶ '}{currentTrack.artist}
+              {!isOnline && currentTrack.audio_url && <span style={{ marginLeft: 6, opacity: 0.6 }}>· offline</span>}
+            </div>
           </div>
           {playing && <EqBars color={currentTrack.color} />}
-          <button className="np-play-btn" onClick={togglePlay}
-            style={{ background: currentTrack.color, color: '#000' }}>
+          <button
+            className="np-play-btn"
+            onClick={togglePlay}
+            style={{ background: currentTrack.color, color: '#000' }}
+          >
             {playing ? '⏸' : '▶'}
           </button>
-          {playing && (
-            <div className="yt-hidden">
-              <iframe
-                key={currentTrack.youtubeId}
-                src={`https://www.youtube.com/embed/${currentTrack.youtubeId}?autoplay=1&controls=0&modestbranding=1`}
-                allow="autoplay"
-                title="player"
-              />
-            </div>
-          )}
         </div>
       )}
 
       {/* Track list */}
       <div className="track-list-section animate-fadeup-1">
-        {tab === 'my' && !loadingTracks && myTracks.length === 0 && (
+        {/* Empty state */}
+        {tab === 'my' && !isLoading && displayTracks.length === 0 && (
           <div className="empty-library">
             <div className="empty-icon">♪</div>
             <div className="empty-title">YOUR LIBRARY IS EMPTY</div>
-            <div className="empty-sub">Tap + ADD to drop your first track</div>
+            <div className="empty-sub">Add YouTube links or upload audio files</div>
             <button className="add-track-btn add-track-btn--big" onClick={() => setShowAdd(true)}>
               ＋ ADD YOUR FIRST TRACK
             </button>
           </div>
         )}
 
-        {loadingTracks && tab === 'my' && (
+        {isLoading && (
           <div className="music-loading"><div className="spinner" /></div>
         )}
 
         {displayTracks.map((track, i) => {
-          const isActive = currentTrack?.youtubeId === (track.youtubeId || track.youtube_id);
+          const ytId = track.youtubeId || track.youtube_id;
+          const isActive = currentTrack && (
+            (ytId && currentTrack.youtubeId === ytId) ||
+            (track.audio_url && currentTrack.audio_url === track.audio_url)
+          );
+          const isUserAdded = !!track.id && typeof track.id === 'string' && track.id.includes('-');
+
           return (
             <div
               key={track.id || i}
@@ -323,33 +500,47 @@ export default function Music({ playerState, onPlayerChange }) {
               style={{ '--tr-color': tabColor }}
             >
               <div className="track-row-thumb-wrap" onClick={() => playTrack(track, tabColor)}>
-                <img
-                  src={track.thumb || `https://img.youtube.com/vi/${track.youtubeId || track.youtube_id}/mqdefault.jpg`}
-                  alt=""
-                  className="track-row-thumb"
-                />
+                {track.thumb ? (
+                  <img src={track.thumb} alt="" className="track-row-thumb" />
+                ) : (
+                  <div className="track-row-thumb track-row-thumb--audio">🎵</div>
+                )}
                 <div className="track-row-play-overlay">
                   {isActive && playing ? <EqBars color={tabColor} /> : <span className="track-row-play-icon">▶</span>}
                 </div>
               </div>
               <div className="track-row-info" onClick={() => playTrack(track, tabColor)}>
                 <div className="track-row-title">{track.title}</div>
-                <div className="track-row-artist">{track.artist}</div>
+                <div className="track-row-artist">
+                  {track.audio_url && <span style={{ marginRight: 4 }}>📁</span>}
+                  {track.artist}
+                </div>
               </div>
               <div className="track-row-actions">
                 {isActive && playing && <div className="track-row-active-dot" style={{ background: tabColor }} />}
-                {tab === 'my' && (
-                  <button className="track-delete-btn" onClick={() => handleDelete(track.id)}>✕</button>
+                {/* Show delete for user-added tracks (not seed) */}
+                {track.id && !track.id.toString().startsWith('c') && (
+                  <button className="track-delete-btn" onClick={() => handleDelete(track)}>✕</button>
                 )}
               </div>
             </div>
           );
         })}
+
+        {/* Add to curated playlist CTA */}
+        {tab !== 'my' && !isLoading && (
+          <div className="add-to-playlist-cta">
+            <button className="add-track-btn add-track-btn--big" style={{ '--bc': tabColor }} onClick={() => setShowAdd(true)}>
+              ＋ ADD TO {CURATED.find(p => p.id === tab)?.label}
+            </button>
+          </div>
+        )}
       </div>
 
       {showAdd && (
         <AddTrackModal
-          onAdd={t => setMyTracks(prev => [t, ...prev])}
+          targetPlaylist={tab}
+          onAdd={handleAdd}
           onClose={() => setShowAdd(false)}
         />
       )}
