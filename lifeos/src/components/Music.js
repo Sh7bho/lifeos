@@ -274,10 +274,9 @@ export default function Music({ playerState, onPlayerChange, audioRef }) {
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
 
-  // Web Audio context for crossfade (uploaded tracks only)
-  const audioCtxRef = useRef(null);
-  const gainNodeRef = useRef(null);       // gain for currently playing audio element
-  const crossfadeTimerRef = useRef(null); // setTimeout handle for crossfade trigger
+  // Crossfade timer ref only — we use volume property directly, NOT Web Audio API
+  // (createMediaElementSource can only be called once per element; calling it again silences audio)
+  const crossfadeTimerRef = useRef(null);
 
   // Persist volume
   useEffect(() => { localStorage.setItem('musicVolume', volume); }, [volume]);
@@ -295,52 +294,41 @@ export default function Music({ playerState, onPlayerChange, audioRef }) {
   useEffect(() => { tracksRef.current = tracks; }, [tracks]);
 
   // ── Crossfade helpers (audio tracks only) ──────────────────────────────────
+  // Uses the audio element's volume property directly — safe to call repeatedly,
+  // unlike createMediaElementSource which can only be called once per element.
 
-  function getAudioContext() {
-    if (!audioCtxRef.current) {
-      audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
-    }
-    return audioCtxRef.current;
-  }
-
-  /**
-   * Schedules a volume fade-out on the current audio element over CROSSFADE_SECONDS,
-   * then fires onComplete so Music.js can start the next track.
-   * The next track starts immediately (gapless), then fades in via CSS transition on volume.
-   */
   function startCrossfade(onComplete) {
     clearTimeout(crossfadeTimerRef.current);
     const el = audioRef?.current;
     if (!el || el.paused) { onComplete(); return; }
 
-    const ctx = getAudioContext();
-    // Disconnect previous gain node if any
-    try { gainNodeRef.current?.disconnect(); } catch {}
+    const steps = 20;
+    const stepMs = (CROSSFADE_SECONDS * 1000) / steps;
+    const startVol = el.volume;
+    let step = 0;
 
-    const source = ctx.createMediaElementSource(el);
-    const gain = ctx.createGain();
-    gainNodeRef.current = gain;
-    source.connect(gain);
-    gain.connect(ctx.destination);
+    const fade = setInterval(() => {
+      step++;
+      el.volume = Math.max(0, startVol * (1 - step / steps));
+      if (step >= steps) {
+        clearInterval(fade);
+        el.volume = 0;
+      }
+    }, stepMs);
 
-    const now = ctx.currentTime;
-    gain.gain.setValueAtTime(gain.gain.value, now);
-    gain.gain.linearRampToValueAtTime(0, now + CROSSFADE_SECONDS);
-
-    // Trigger next track at the crossfade midpoint so it fades in while this fades out
+    // Fire the next-track callback at the midpoint so it overlaps
     crossfadeTimerRef.current = setTimeout(() => {
+      crossfadeTimerRef.current = null;
       onComplete();
     }, (CROSSFADE_SECONDS / 2) * 1000);
   }
 
   function cancelCrossfade() {
     clearTimeout(crossfadeTimerRef.current);
-    // Restore gain immediately
-    const ctx = audioCtxRef.current;
-    const gain = gainNodeRef.current;
-    if (ctx && gain) {
-      gain.gain.cancelScheduledValues(ctx.currentTime);
-      gain.gain.setValueAtTime(1, ctx.currentTime);
+    crossfadeTimerRef.current = null;
+    // Restore volume to user preference
+    if (audioRef?.current) {
+      audioRef.current.volume = (playerState.volume ?? volume) / 100;
     }
   }
 
@@ -393,17 +381,13 @@ export default function Music({ playerState, onPlayerChange, audioRef }) {
         el.duration > CROSSFADE_SECONDS * 2 &&
         el.duration - el.currentTime <= CROSSFADE_SECONDS &&
         playModeRef.current !== 'repeat' &&
-        !crossfadeTimerRef.current
+        crossfadeTimerRef.current === null
       ) {
         const nextTrack = getNextTrackFromRefs(1);
         if (nextTrack?.audio_url) {
-          // Both current and next are audio tracks — do crossfade
-          crossfadeTimerRef.current = setTimeout(() => {
-            crossfadeTimerRef.current = null;
+          startCrossfade(() => {
             playTrack(nextTrack, getTabColor(tabRef.current));
-          }, (CROSSFADE_SECONDS / 2) * 1000);
-
-          startCrossfade(() => {}); // gain fade handled above; track switch at midpoint
+          });
         }
       }
     };
