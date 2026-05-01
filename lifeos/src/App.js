@@ -220,7 +220,6 @@ function App() {
       <audio
         ref={audioRef}
         style={{ display: 'none' }}
-        onEnded={() => handlePlayerChange({ _audioEnded: Date.now() })}
       />
 
       {/* Silent looping audio — keeps iOS audio session alive during YouTube playback */}
