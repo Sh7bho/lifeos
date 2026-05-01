@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react'; // useRef still needed for fileRef in AddTrackModal
 import { supabase } from '../lib/supabase';
 import './Music.css';
 
@@ -11,14 +11,7 @@ const CURATED = [
   { id: 'boss',  label: 'BOSS MINDSET',     icon: '📈', color: '#C8A96E' },
 ];
 
-// ── localStorage helpers ──
-function lsGet(key, fallback) {
-  try { const v = localStorage.getItem(key); return v !== null ? JSON.parse(v) : fallback; }
-  catch { return fallback; }
-}
-function lsSet(key, value) {
-  try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
-}
+
 
 function extractYouTubeId(url) {
   const patterns = [
@@ -263,7 +256,7 @@ function AddTrackModal({ targetPlaylist, onAdd, onClose }) {
 // ── Main Component ──
 // audioRef comes from App.js where the <audio> element permanently lives
 export default function Music({ playerState, onPlayerChange, audioRef }) {
-  const [tab, setTab] = useState(() => lsGet('music_tab', 'my'));
+  const [tab, setTab] = useState('my');
   const [tracks, setTracks] = useState({});
   const [loadingTab, setLoadingTab] = useState({});
   const [showAdd, setShowAdd] = useState(false);
@@ -272,130 +265,76 @@ export default function Music({ playerState, onPlayerChange, audioRef }) {
   const { currentTrack, playing } = playerState;
   const isAudioTrack = !!currentTrack?.audio_url;
 
-  // ── Persistent state: volume, playMode, queue ──
-  const [volume, setVolume]     = useState(() => lsGet('music_volume', 80));
-  const [playMode, setPlayMode] = useState(() => lsGet('music_play_mode', 'queue'));
+  const [volume, setVolume] = useState(Number(localStorage.getItem('musicVolume')) || 80);
+  const [playMode, setPlayMode] = useState('queue');
+  const [queue, setQueue] = useState([]);
   const [showQueue, setShowQueue] = useState(false);
-
-  // Queue is persisted but rebuilt when the tab's tracks are first loaded.
-  // After that, manual reorders/removes are kept in localStorage.
-  const [queue, setQueue]           = useState(() => lsGet('music_queue', []));
-  const [queueBuilt, setQueueBuilt] = useState(false); // true once we've seeded from real data
 
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
 
-  // ── Refs so event-listener closures always read fresh state ──
-  const playModeRef     = useRef(playMode);
-  const queueRef        = useRef(queue);
+  // Persist volume
+  useEffect(() => { localStorage.setItem('musicVolume', volume); }, [volume]);
+
+  // Refs so callbacks always read fresh state — fixes stale closure bug
+  const playModeRef = useRef(playMode);
+  const queueRef = useRef(queue);
   const currentTrackRef = useRef(currentTrack);
-  const tabRef          = useRef(tab);
+  const tabRef = useRef(tab);
+  const tracksRef = useRef({});
   useEffect(() => { playModeRef.current = playMode; }, [playMode]);
-  useEffect(() => { queueRef.current    = queue;     }, [queue]);
+  useEffect(() => { queueRef.current = queue; }, [queue]);
   useEffect(() => { currentTrackRef.current = currentTrack; }, [currentTrack]);
-  useEffect(() => { tabRef.current      = tab;       }, [tab]);
+  useEffect(() => { tabRef.current = tab; }, [tab]);
+  useEffect(() => { tracksRef.current = tracks; }, [tracks]);
 
-  // ── Persist tab, volume, playMode ──
-  useEffect(() => { lsSet('music_tab',       tab);      }, [tab]);
-  useEffect(() => { lsSet('music_volume',    volume);   }, [volume]);
-  useEffect(() => { lsSet('music_play_mode', playMode); }, [playMode]);
-
-  // ── Persist queue (debounced to avoid hammering localStorage) ──
-  useEffect(() => {
-    const id = setTimeout(() => lsSet('music_queue', queue), 300);
-    return () => clearTimeout(id);
-  }, [queue]);
-
-  // ── Build queue from tab tracks on first load of that tab ──
-  // Only seeds if queue is empty or the tab changed — preserves manual reorders.
-  useEffect(() => {
-    const list = getAllTracksForTab(tab);
-    if (!list.length) return; // tracks not loaded yet
-    // If persisted queue has tracks from this tab already, keep it.
-    const hasCurrentTabTracks = queue.some(q =>
-      list.find(t => t.id === q.id)
-    );
-    if (!hasCurrentTabTracks) {
-      setQueue(list.map((t, i) => ({ ...t, _qi: i })));
+  // Shared ended logic — used by both audio element and YouTube
+  function handleTrackEnded() {
+    setProgress(0);
+    if (playModeRef.current === 'repeat') {
+      const el = audioRef?.current;
+      if (el && currentTrackRef.current?.audio_url) {
+        el.currentTime = 0;
+        el.play().catch(() => {});
+      } else {
+        // Signal App.js to seek YouTube to 0 and replay
+        onPlayerChange({ _ytRepeat: Date.now() });
+      }
+      return;
     }
-    setQueueBuilt(true);
-  }, [tab, tracks]);
+    const next = getNextTrackFromRefs(1);
+    if (next) playTrack(next, getTabColor(tabRef.current));
+    else onPlayerChange({ currentTrack: null, playing: false });
+  }
 
-  // ── Media Session API — lock screen controls ──
-  useEffect(() => {
-    if (!('mediaSession' in navigator) || !currentTrack) return;
-    navigator.mediaSession.metadata = new MediaMetadata({
-      title:   currentTrack.title  || 'Unknown',
-      artist:  currentTrack.artist || 'Unknown',
-      artwork: currentTrack.thumb
-        ? [{ src: currentTrack.thumb, sizes: '320x180', type: 'image/jpeg' }]
-        : [],
-    });
-    navigator.mediaSession.setActionHandler('play', () => {
-      onPlayerChange({ currentTrack: currentTrackRef.current, playing: true });
-    });
-    navigator.mediaSession.setActionHandler('pause', () => {
-      onPlayerChange({ currentTrack: currentTrackRef.current, playing: false });
-    });
-    navigator.mediaSession.setActionHandler('previoustrack', () => {
-      const next = getNextTrackFromRefs(-1);
-      if (next) playTrack(next, getTabColor(tabRef.current));
-    });
-    navigator.mediaSession.setActionHandler('nexttrack', () => {
-      const next = getNextTrackFromRefs(1);
-      if (next) playTrack(next, getTabColor(tabRef.current));
-    });
-  }, [currentTrack]);
-
-  // ── Audio element events (element lives in App.js) ──
+  // Wire up audio element events — attach once, refs keep it fresh
   useEffect(() => {
     const el = audioRef?.current;
     if (!el) return;
-
-    const onTimeUpdate = () => {
-      if (!el.duration) return;
-      setProgress((el.currentTime / el.duration) * 100);
-      if ('mediaSession' in navigator) {
-        try {
-          navigator.mediaSession.setPositionState({
-            duration:     el.duration,
-            playbackRate: el.playbackRate,
-            position:     el.currentTime,
-          });
-        } catch {}
-      }
-    };
-
-    const onMeta = () => setDuration(el.duration);
-
-    const onEnded = () => {
-      setProgress(0);
-      if (playModeRef.current === 'repeat') {
-        el.currentTime = 0;
-        el.play().catch(() => {});
-        return;
-      }
-      const next = getNextTrackFromRefs(1);
-      if (next) playTrack(next, getTabColor(tabRef.current));
-      else onPlayerChange({ currentTrack: null, playing: false });
-    };
-
-    el.addEventListener('timeupdate',     onTimeUpdate);
+    const onTimeUpdate = () => { if (el.duration) setProgress((el.currentTime / el.duration) * 100); };
+    const onMeta  = () => setDuration(el.duration);
+    const onEnded = () => handleTrackEnded();
+    el.addEventListener('timeupdate', onTimeUpdate);
     el.addEventListener('loadedmetadata', onMeta);
-    el.addEventListener('ended',          onEnded);
+    el.addEventListener('ended', onEnded);
     return () => {
-      el.removeEventListener('timeupdate',     onTimeUpdate);
+      el.removeEventListener('timeupdate', onTimeUpdate);
       el.removeEventListener('loadedmetadata', onMeta);
-      el.removeEventListener('ended',          onEnded);
+      el.removeEventListener('ended', onEnded);
     };
-  }, [audioRef]); // only attach once — refs keep closures fresh
+  }, [audioRef]);
+
+  // YouTube ended — App.js sets _ytEnded: Date.now() when YT player fires ENDED state
+  useEffect(() => {
+    if (!playerState._ytEnded) return;
+    handleTrackEnded();
+  }, [playerState._ytEnded]);
 
   function handleSeek(val) {
     setProgress(val);
     if (audioRef.current && duration) {
       audioRef.current.currentTime = (val / 100) * duration;
     }
-    onPlayerChange({ currentTrack, playing, volume, seekPct: val });
   }
 
   function formatTime(sec) {
@@ -405,47 +344,16 @@ export default function Music({ playerState, onPlayerChange, audioRef }) {
     return `${m}:${s.toString().padStart(2, '0')}`;
   }
 
-  // ── Single source of truth for next-track logic (works from refs, safe in closures) ──
-  function getNextTrackFromRefs(dir = 1) {
-    const list = queueRef.current.length ? queueRef.current : getAllTracksForTab(tabRef.current);
-    const ct   = currentTrackRef.current;
-    const mode = playModeRef.current;
-    if (!list.length) return null;
-    if (mode === 'repeat') return ct;
-    if (mode === 'shuffle') {
-      const others = list.filter(t => !isSameTrack(t, ct));
-      return others.length ? others[Math.floor(Math.random() * others.length)] : list[0];
-    }
-    const idx = list.findIndex(t => isSameTrack(t, ct));
-    return list[(idx + dir + list.length) % list.length];
-  }
-
-  // ── Also used from event handlers where state is fresh ──
-  function getNextTrack(dir = 1) {
-    const list = queue.length ? queue : getAllTracksForTab(tab);
-    if (!list.length) return null;
-    if (playMode === 'repeat') return currentTrack;
-    if (playMode === 'shuffle') {
-      const others = list.filter(t => !isSameTrack(t, currentTrack));
-      return others.length ? others[Math.floor(Math.random() * others.length)] : list[0];
-    }
-    const idx = list.findIndex(t => isSameTrack(t, currentTrack));
-    return list[(idx + dir + list.length) % list.length];
-  }
-
-  function isSameTrack(a, b) {
-    if (!a || !b) return false;
-    const aYt = a.youtubeId || a.youtube_id;
-    const bYt = b.youtubeId || b.youtube_id;
-    if (aYt && bYt) return aYt === bYt;
-    if (a.audio_url && b.audio_url) return a.audio_url === b.audio_url;
-    return a.id === b.id;
-  }
+  // Build queue from tab
+  useEffect(() => {
+    const list = getAllTracksForTab(tab);
+    setQueue(list.map((t, i) => ({ ...t, _qi: i })));
+  }, [tab, tracks]);
 
   function cyclePlayMode() {
     setPlayMode(m => m === 'queue' ? 'shuffle' : m === 'shuffle' ? 'repeat' : 'queue');
   }
-  function playModeIcon()  {
+  function playModeIcon() {
     if (playMode === 'shuffle') return '⇄';
     if (playMode === 'repeat')  return '↻';
     return '≡';
@@ -456,9 +364,48 @@ export default function Music({ playerState, onPlayerChange, audioRef }) {
     return 'QUEUE';
   }
 
+  function getNextTrackFromRefs(dir = 1) {
+    const list = queueRef.current.length ? queueRef.current : (tracksRef.current[tabRef.current] || []);
+    const ct = currentTrackRef.current;
+    const mode = playModeRef.current;
+    if (!list.length) return null;
+    if (mode === 'repeat') return ct;
+    if (mode === 'shuffle') {
+      const others = list.filter(t => {
+        const ytId = t.youtubeId || t.youtube_id;
+        return !(ct && ((ytId && ct.youtubeId === ytId) || (t.audio_url && ct.audio_url === t.audio_url)));
+      });
+      return others.length ? others[Math.floor(Math.random() * others.length)] : list[0];
+    }
+    const idx = list.findIndex(t => {
+      const ytId = t.youtubeId || t.youtube_id;
+      return ct && ((ytId && ct.youtubeId === ytId) || (t.audio_url && ct.audio_url === t.audio_url));
+    });
+    return list[(idx + dir + list.length) % list.length];
+  }
+
+  function getNextTrack(dir = 1) {
+    const list = queue.length ? queue : getAllTracksForTab(tab);
+    if (!list.length) return null;
+    if (playMode === 'repeat') return currentTrack;
+    if (playMode === 'shuffle') {
+      const others = list.filter(t => {
+        const ytId = t.youtubeId || t.youtube_id;
+        return !(currentTrack && ((ytId && currentTrack.youtubeId === ytId) || (t.audio_url && currentTrack.audio_url === t.audio_url)));
+      });
+      return others.length ? others[Math.floor(Math.random() * others.length)] : list[0];
+    }
+    const idx = list.findIndex(t => {
+      const ytId = t.youtubeId || t.youtube_id;
+      return currentTrack && ((ytId && currentTrack.youtubeId === ytId) || (t.audio_url && currentTrack.audio_url === t.audio_url));
+    });
+    const next = (idx + dir + list.length) % list.length;
+    return list[next];
+  }
+
   function skipTrack(dir) {
-    const next = getNextTrack(dir);
-    if (next) playTrack(next, getTabColor(tab));
+    const next = getNextTrackFromRefs(dir);
+    if (next) playTrack(next, getTabColor(tabRef.current));
   }
 
   function moveInQueue(from, to) {
@@ -476,14 +423,14 @@ export default function Music({ playerState, onPlayerChange, audioRef }) {
 
   function handleVolumeChange(val) {
     setVolume(val);
-    onPlayerChange({ currentTrack, playing, volume: val });
+    onPlayerChange({ volume: val });
   }
 
-  // ── Online/offline ──
+  // Online/offline
   useEffect(() => {
-    const on  = () => setIsOnline(true);
+    const on = () => setIsOnline(true);
     const off = () => setIsOnline(false);
-    window.addEventListener('online',  on);
+    window.addEventListener('online', on);
     window.addEventListener('offline', off);
     return () => { window.removeEventListener('online', on); window.removeEventListener('offline', off); };
   }, []);
@@ -496,7 +443,6 @@ export default function Music({ playerState, onPlayerChange, audioRef }) {
     }
   }, [isOnline]);
 
-  // ── Tab loading ──
   async function ensureTabLoaded(tabId) {
     if (tracks[tabId] !== undefined || loadingTab[tabId]) return;
     setLoadingTab(prev => ({ ...prev, [tabId]: true }));
@@ -507,7 +453,9 @@ export default function Music({ playerState, onPlayerChange, audioRef }) {
 
   useEffect(() => { ensureTabLoaded(tab); }, [tab]);
 
-  function getAllTracksForTab(tabId) { return tracks[tabId] || []; }
+  function getAllTracksForTab(tabId) {
+    return tracks[tabId] || [];
+  }
 
   function getTabColor(tabId) {
     if (tabId === 'my') return '#C8A96E';
@@ -517,14 +465,10 @@ export default function Music({ playerState, onPlayerChange, audioRef }) {
   function playTrack(track, color) {
     const t = { ...track, youtubeId: track.youtubeId || track.youtube_id, color };
     onPlayerChange({ currentTrack: t, playing: true });
-    // Persist so App.js can restore on refresh (if App.js reads this key on mount)
-    lsSet('music_current_track', t);
-    lsSet('music_playing', true);
   }
 
   function togglePlay() {
     onPlayerChange({ currentTrack, playing: !playing });
-    lsSet('music_playing', !playing);
   }
 
   function handleDelete(track) {
@@ -533,12 +477,7 @@ export default function Music({ playerState, onPlayerChange, audioRef }) {
       ...prev,
       [tab]: (prev[tab] || []).filter(t => t.id !== track.id),
     }));
-    // Also remove from queue
-    setQueue(prev => prev.filter(t => !isSameTrack(t, track)));
-    if (isSameTrack(currentTrack, track)) {
-      onPlayerChange({ currentTrack: null, playing: false });
-      lsSet('music_current_track', null);
-    }
+    if (currentTrack?.id === track.id) onPlayerChange({ currentTrack: null, playing: false });
   }
 
   function handleAdd(newTrack) {
@@ -546,15 +485,11 @@ export default function Music({ playerState, onPlayerChange, audioRef }) {
       ...prev,
       [newTrack.playlist]: [newTrack, ...(prev[newTrack.playlist] || [])],
     }));
-    // Add to front of queue if we're on the same tab
-    if (newTrack.playlist === tab) {
-      setQueue(prev => [{ ...newTrack, _qi: -1 }, ...prev]);
-    }
   }
 
   const displayTracks = getAllTracksForTab(tab);
-  const tabColor      = getTabColor(tab);
-  const isLoading     = loadingTab[tab];
+  const tabColor = getTabColor(tab);
+  const isLoading = loadingTab[tab];
 
   return (
     <div className="music-page">
@@ -690,7 +625,11 @@ export default function Music({ playerState, onPlayerChange, audioRef }) {
 
           <div className="queue-list">
             {queue.map((t, i) => {
-              const isActive = isSameTrack(t, currentTrack);
+              const ytId = t.youtubeId || t.youtube_id;
+              const isActive = currentTrack && (
+                (ytId && currentTrack.youtubeId === ytId) ||
+                (t.audio_url && currentTrack.audio_url === t.audio_url)
+              );
               return (
                 <div key={t.id || i} className={`queue-item ${isActive ? 'queue-item--active' : ''}`} style={{ '--qc': currentTrack.color || '#C8A96E' }}>
                   <span className="queue-num">{isActive ? '▶' : i + 1}</span>
@@ -734,7 +673,12 @@ export default function Music({ playerState, onPlayerChange, audioRef }) {
         )}
 
         {displayTracks.map((track, i) => {
-          const isActive = isSameTrack(track, currentTrack);
+          const ytId = track.youtubeId || track.youtube_id;
+          const isActive = currentTrack && (
+            (ytId && currentTrack.youtubeId === ytId) ||
+            (track.audio_url && currentTrack.audio_url === track.audio_url)
+          );
+
           return (
             <div
               key={track.id || i}
