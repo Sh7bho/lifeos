@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'; // useRef still needed for fileRef in AddTrackModal
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import './Music.css';
 
@@ -11,7 +11,9 @@ const CURATED = [
   { id: 'boss',  label: 'BOSS MINDSET',     icon: '📈', color: '#C8A96E' },
 ];
 
-
+// Crossfade duration in seconds — applied to uploaded audio tracks only
+// (YouTube audio pipeline is inaccessible, so crossfade there is impossible)
+const CROSSFADE_SECONDS = 3;
 
 function extractYouTubeId(url) {
   const patterns = [
@@ -254,7 +256,6 @@ function AddTrackModal({ targetPlaylist, onAdd, onClose }) {
 }
 
 // ── Main Component ──
-// audioRef comes from App.js where the <audio> element permanently lives
 export default function Music({ playerState, onPlayerChange, audioRef }) {
   const [tab, setTab] = useState('my');
   const [tracks, setTracks] = useState({});
@@ -273,10 +274,15 @@ export default function Music({ playerState, onPlayerChange, audioRef }) {
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
 
+  // Web Audio context for crossfade (uploaded tracks only)
+  const audioCtxRef = useRef(null);
+  const gainNodeRef = useRef(null);       // gain for currently playing audio element
+  const crossfadeTimerRef = useRef(null); // setTimeout handle for crossfade trigger
+
   // Persist volume
   useEffect(() => { localStorage.setItem('musicVolume', volume); }, [volume]);
 
-  // Refs so callbacks always read fresh state — fixes stale closure bug
+  // Refs so callbacks always read fresh state
   const playModeRef = useRef(playMode);
   const queueRef = useRef(queue);
   const currentTrackRef = useRef(currentTrack);
@@ -288,32 +294,123 @@ export default function Music({ playerState, onPlayerChange, audioRef }) {
   useEffect(() => { tabRef.current = tab; }, [tab]);
   useEffect(() => { tracksRef.current = tracks; }, [tracks]);
 
-  // Shared ended logic — used by both audio element and YouTube
+  // ── Crossfade helpers (audio tracks only) ──────────────────────────────────
+
+  function getAudioContext() {
+    if (!audioCtxRef.current) {
+      audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    return audioCtxRef.current;
+  }
+
+  /**
+   * Schedules a volume fade-out on the current audio element over CROSSFADE_SECONDS,
+   * then fires onComplete so Music.js can start the next track.
+   * The next track starts immediately (gapless), then fades in via CSS transition on volume.
+   */
+  function startCrossfade(onComplete) {
+    clearTimeout(crossfadeTimerRef.current);
+    const el = audioRef?.current;
+    if (!el || el.paused) { onComplete(); return; }
+
+    const ctx = getAudioContext();
+    // Disconnect previous gain node if any
+    try { gainNodeRef.current?.disconnect(); } catch {}
+
+    const source = ctx.createMediaElementSource(el);
+    const gain = ctx.createGain();
+    gainNodeRef.current = gain;
+    source.connect(gain);
+    gain.connect(ctx.destination);
+
+    const now = ctx.currentTime;
+    gain.gain.setValueAtTime(gain.gain.value, now);
+    gain.gain.linearRampToValueAtTime(0, now + CROSSFADE_SECONDS);
+
+    // Trigger next track at the crossfade midpoint so it fades in while this fades out
+    crossfadeTimerRef.current = setTimeout(() => {
+      onComplete();
+    }, (CROSSFADE_SECONDS / 2) * 1000);
+  }
+
+  function cancelCrossfade() {
+    clearTimeout(crossfadeTimerRef.current);
+    // Restore gain immediately
+    const ctx = audioCtxRef.current;
+    const gain = gainNodeRef.current;
+    if (ctx && gain) {
+      gain.gain.cancelScheduledValues(ctx.currentTime);
+      gain.gain.setValueAtTime(1, ctx.currentTime);
+    }
+  }
+
+  // ── Track ended logic ───────────────────────────────────────────────────────
+
   function handleTrackEnded() {
     setProgress(0);
+    cancelCrossfade();
+
     if (playModeRef.current === 'repeat') {
       const el = audioRef?.current;
       if (el && currentTrackRef.current?.audio_url) {
         el.currentTime = 0;
         el.play().catch(() => {});
       } else {
-        // Signal App.js to seek YouTube to 0 and replay
         onPlayerChange({ _ytRepeat: Date.now() });
       }
       return;
     }
+
     const next = getNextTrackFromRefs(1);
     if (next) playTrack(next, getTabColor(tabRef.current));
     else onPlayerChange({ currentTrack: null, playing: false });
   }
 
-  // Wire up audio element events — attach once, refs keep it fresh
+  // ── Wire audio element events ───────────────────────────────────────────────
+
   useEffect(() => {
     const el = audioRef?.current;
     if (!el) return;
-    const onTimeUpdate = () => { if (el.duration) setProgress((el.currentTime / el.duration) * 100); };
+
+    const onTimeUpdate = () => {
+      if (!el.duration) return;
+      const pct = (el.currentTime / el.duration) * 100;
+      setProgress(pct);
+
+      // Update Media Session position state for lock-screen scrubber
+      if ('mediaSession' in navigator && navigator.mediaSession.setPositionState) {
+        try {
+          navigator.mediaSession.setPositionState({
+            duration: el.duration,
+            playbackRate: el.playbackRate,
+            position: el.currentTime,
+          });
+        } catch {}
+      }
+
+      // Trigger crossfade when close to end (audio tracks only, not repeat mode)
+      if (
+        el.duration > CROSSFADE_SECONDS * 2 &&
+        el.duration - el.currentTime <= CROSSFADE_SECONDS &&
+        playModeRef.current !== 'repeat' &&
+        !crossfadeTimerRef.current
+      ) {
+        const nextTrack = getNextTrackFromRefs(1);
+        if (nextTrack?.audio_url) {
+          // Both current and next are audio tracks — do crossfade
+          crossfadeTimerRef.current = setTimeout(() => {
+            crossfadeTimerRef.current = null;
+            playTrack(nextTrack, getTabColor(tabRef.current));
+          }, (CROSSFADE_SECONDS / 2) * 1000);
+
+          startCrossfade(() => {}); // gain fade handled above; track switch at midpoint
+        }
+      }
+    };
+
     const onMeta  = () => setDuration(el.duration);
-    const onEnded = () => handleTrackEnded();
+    const onEnded = () => { crossfadeTimerRef.current = null; handleTrackEnded(); };
+
     el.addEventListener('timeupdate', onTimeUpdate);
     el.addEventListener('loadedmetadata', onMeta);
     el.addEventListener('ended', onEnded);
@@ -324,14 +421,32 @@ export default function Music({ playerState, onPlayerChange, audioRef }) {
     };
   }, [audioRef]);
 
-  // YouTube ended — App.js sets _ytEnded: Date.now() when YT player fires ENDED state
+  // ── YouTube ended signal from App.js ────────────────────────────────────────
+
   useEffect(() => {
     if (!playerState._ytEnded) return;
     handleTrackEnded();
   }, [playerState._ytEnded]);
 
+  // ── Skip signals from App.js (Media Session nexttrack/previoustrack) ────────
+  // These fire even when the screen is locked or the app is backgrounded,
+  // because App.js registers them with the OS via the Media Session API.
+
+  useEffect(() => {
+    if (!playerState._skipNext) return;
+    skipTrack(1);
+  }, [playerState._skipNext]);
+
+  useEffect(() => {
+    if (!playerState._skipPrev) return;
+    skipTrack(-1);
+  }, [playerState._skipPrev]);
+
+  // ── Seek ───────────────────────────────────────────────────────────────────
+
   function handleSeek(val) {
     setProgress(val);
+    cancelCrossfade(); // cancel any in-progress crossfade when user scrubs
     if (audioRef.current && duration) {
       audioRef.current.currentTime = (val / 100) * duration;
     }
@@ -344,7 +459,8 @@ export default function Music({ playerState, onPlayerChange, audioRef }) {
     return `${m}:${s.toString().padStart(2, '0')}`;
   }
 
-  // Build queue from tab
+  // ── Queue ──────────────────────────────────────────────────────────────────
+
   useEffect(() => {
     const list = getAllTracksForTab(tab);
     setQueue(list.map((t, i) => ({ ...t, _qi: i })));
@@ -399,11 +515,11 @@ export default function Music({ playerState, onPlayerChange, audioRef }) {
       const ytId = t.youtubeId || t.youtube_id;
       return currentTrack && ((ytId && currentTrack.youtubeId === ytId) || (t.audio_url && currentTrack.audio_url === t.audio_url));
     });
-    const next = (idx + dir + list.length) % list.length;
-    return list[next];
+    return list[(idx + dir + list.length) % list.length];
   }
 
   function skipTrack(dir) {
+    cancelCrossfade();
     const next = getNextTrackFromRefs(dir);
     if (next) playTrack(next, getTabColor(tabRef.current));
   }
@@ -426,7 +542,8 @@ export default function Music({ playerState, onPlayerChange, audioRef }) {
     onPlayerChange({ volume: val });
   }
 
-  // Online/offline
+  // ── Online/offline ─────────────────────────────────────────────────────────
+
   useEffect(() => {
     const on = () => setIsOnline(true);
     const off = () => setIsOnline(false);
@@ -442,6 +559,8 @@ export default function Music({ playerState, onPlayerChange, audioRef }) {
       if (fallback) playTrack(fallback, getTabColor(tab));
     }
   }, [isOnline]);
+
+  // ── Track loading ──────────────────────────────────────────────────────────
 
   async function ensureTabLoaded(tabId) {
     if (tracks[tabId] !== undefined || loadingTab[tabId]) return;
@@ -463,6 +582,7 @@ export default function Music({ playerState, onPlayerChange, audioRef }) {
   }
 
   function playTrack(track, color) {
+    cancelCrossfade();
     const t = { ...track, youtubeId: track.youtubeId || track.youtube_id, color };
     onPlayerChange({ currentTrack: t, playing: true });
   }
