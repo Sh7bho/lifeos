@@ -8,10 +8,9 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  animation: fc-fadein 0.25s ease;
-  /* Fill entire viewport including notch areas */
   width: 100vw;
   height: 100dvh;
+  animation: fc-fadein 0.25s ease;
 }
 
 @keyframes fc-fadein {
@@ -19,7 +18,7 @@
   to   { opacity: 1; }
 }
 
-/* ── Inner container ── */
+/* ── Inner ── */
 .flipclock-inner {
   display: flex;
   flex-direction: column;
@@ -31,7 +30,7 @@
   width: 100%;
 }
 
-/* ── Meta row ── */
+/* ── Meta ── */
 .flipclock-meta {
   display: flex;
   align-items: center;
@@ -39,14 +38,12 @@
   min-height: 20px;
 }
 
-.fc-date,
-.fc-day {
+.fc-date, .fc-day {
   font-family: var(--font-mono, monospace);
   font-size: clamp(10px, 1.8vw, 14px);
   color: #555;
   letter-spacing: 0.14em;
 }
-
 .fc-date { font-weight: 500; }
 .fc-day  { font-weight: 700; }
 
@@ -79,7 +76,7 @@
   gap: clamp(3px, 0.8vw, 8px);
 }
 
-/* ── Single digit — vw-based so it fills screen ── */
+/* ── Single digit ── */
 .flip-digit {
   position: relative;
   width: clamp(52px, 13vw, 110px);
@@ -89,13 +86,13 @@
   box-shadow:
     0 10px 30px rgba(0,0,0,0.75),
     inset 0 1px 0 rgba(255,255,255,0.03);
-  perspective: 600px;
+  perspective: 700px;
   transform-style: preserve-3d;
   overflow: hidden;
   flex-shrink: 0;
 }
 
-/* Center divider line */
+/* Center divider */
 .flip-digit::after {
   content: '';
   position: absolute;
@@ -105,9 +102,10 @@
   transform: translateY(-1px);
   background: rgba(0,0,0,0.95);
   z-index: 50;
+  pointer-events: none;
 }
 
-/* ── Shared half card ── */
+/* ── Shared card ── */
 .flip-card {
   position: absolute;
   left: 0; right: 0;
@@ -119,7 +117,7 @@
   -webkit-backface-visibility: hidden;
 }
 
-/* Digit text — scales with the card */
+/* Digit text */
 .flip-card span {
   font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
   font-size: clamp(72px, 18vw, 152px);
@@ -132,58 +130,79 @@
   top: 50%;
   transform: translate(-50%, -50%);
   text-rendering: geometricPrecision;
+  will-change: transform;
 }
 
-/* ── Static top ── */
+/* ── Static top — current value, top half ── */
 .flip-top-static {
   top: 0;
   background: linear-gradient(to bottom, rgba(255,255,255,0.05), rgba(0,0,0,0.08));
   border-radius: clamp(8px,1.5vw,14px) clamp(8px,1.5vw,14px) 0 0;
+  z-index: 1;
 }
 .flip-top-static span { top: 100%; }
 
-/* ── Static bottom ── */
+/* ── Static bottom — current value, bottom half ── */
 .flip-bottom-static {
   bottom: 0;
   background: linear-gradient(to bottom, rgba(0,0,0,0.2), rgba(255,255,255,0.01));
   border-radius: 0 0 clamp(8px,1.5vw,14px) clamp(8px,1.5vw,14px);
+  z-index: 1;
 }
 .flip-bottom-static span { top: 0%; }
 
-/* ── Animated top flap ── */
+/* ── Animated top flap — always mounted, starts flat ── */
 .flip-top-anim {
   top: 0;
   background: linear-gradient(to bottom, rgba(255,255,255,0.05), rgba(0,0,0,0.18));
   border-radius: clamp(8px,1.5vw,14px) clamp(8px,1.5vw,14px) 0 0;
   transform-origin: bottom center;
-  animation: flipTopAway 0.48s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-  z-index: 20;
+  transform: rotateX(0deg);
+  z-index: 10;
+  /* No animation by default — invisible because static top is on top at z:1 but this is z:10 */
+  /* We hide it when not flipping by making it match the static top */
+  transition: none;
 }
 .flip-top-anim span { top: 100%; }
 
-/* ── Animated bottom flap ── */
+/* When flipping — animate the top flap folding away */
+.flip-top-anim--go {
+  animation: flipTopAway 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  z-index: 20;
+}
+
+/* ── Animated bottom flap — always mounted, starts folded back ── */
 .flip-bottom-anim {
   bottom: 0;
   background: linear-gradient(to bottom, rgba(0,0,0,0.28), rgba(255,255,255,0.02));
   border-radius: 0 0 clamp(8px,1.5vw,14px) clamp(8px,1.5vw,14px);
   transform-origin: top center;
-  animation: flipBottomIn 0.48s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-  z-index: 19;
+  transform: rotateX(90deg); /* hidden behind — fully folded back */
+  z-index: 9;
+  transition: none;
 }
 .flip-bottom-anim span { top: 0%; }
 
-/* ── Flip animations — tighter, snappier ── */
+/* When flipping — animate the bottom flap unfolding in */
+.flip-bottom-anim--go {
+  animation: flipBottomIn 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  z-index: 19;
+}
+
+/* ── The flip animations ── */
 @keyframes flipTopAway {
-  0%   { transform: rotateX(0deg);   filter: brightness(1); }
-  100% { transform: rotateX(-90deg); filter: brightness(0.6); }
+  0%   { transform: rotateX(0deg);    filter: brightness(1);   }
+  45%  { transform: rotateX(-88deg);  filter: brightness(0.55);}
+  100% { transform: rotateX(-90deg);  filter: brightness(0.5); }
 }
 
 @keyframes flipBottomIn {
-  0%   { transform: rotateX(90deg);  filter: brightness(0.6); }
-  100% { transform: rotateX(0deg);   filter: brightness(1); }
+  0%   { transform: rotateX(90deg);   filter: brightness(0.5); }
+  55%  { transform: rotateX(2deg);    filter: brightness(0.95);}
+  100% { transform: rotateX(0deg);    filter: brightness(1);   }
 }
 
-/* ── Centiseconds (stopwatch) ── */
+/* ── Centiseconds ── */
 .fc-cs-wrap {
   display: flex;
   align-items: flex-end;
@@ -197,7 +216,7 @@
   letter-spacing: -0.02em;
 }
 
-/* ── Controls (timer / stopwatch) ── */
+/* ── Controls ── */
 .fc-controls {
   display: flex;
   gap: 12px;
@@ -215,9 +234,8 @@
   font-weight: 700;
   letter-spacing: 0.12em;
   cursor: pointer;
-  transition: transform 0.15s ease, background 0.15s ease;
+  transition: transform 0.15s ease;
 }
-
 .fc-btn:active { transform: scale(0.94); }
 
 .fc-btn-ghost {
@@ -227,7 +245,7 @@
 }
 .fc-btn-ghost:hover { color: #888; border-color: #444; }
 
-/* ── Timer setup screen ── */
+/* ── Timer setup ── */
 .fc-setup {
   display: flex;
   flex-direction: column;
@@ -310,7 +328,6 @@
   cursor: pointer;
   transition: all 0.2s ease;
 }
-
 .fc-tab--active {
   background: #fff;
   color: #000;
