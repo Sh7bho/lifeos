@@ -1,44 +1,63 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './FlipClock.css';
 
+// ── FlipDigit — always-mounted cards, CSS class driven, no remount jank ──
 function FlipDigit({ value }) {
-  const [flipping, setFlipping] = useState(false);
   const prevRef = useRef(value);
-  const [displayPrev, setDisplayPrev] = useState(value);
+  const prevDisplayRef = useRef(value);
+  const [state, setState] = useState({ cur: value, prev: value, flipping: false });
   const timerRef = useRef(null);
+  const rafRef = useRef(null);
 
   useEffect(() => {
-    if (value !== prevRef.current) {
-      const prev = prevRef.current;
-      prevRef.current = value;
-      setDisplayPrev(prev);
-      setFlipping(false);
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          setFlipping(true);
-          clearTimeout(timerRef.current);
-          timerRef.current = setTimeout(() => setFlipping(false), 480);
-        });
+    if (value === prevRef.current) return;
+    const prev = prevRef.current;
+    prevRef.current = value;
+    prevDisplayRef.current = prev;
+
+    // Cancel any in-flight animation
+    cancelAnimationFrame(rafRef.current);
+    clearTimeout(timerRef.current);
+
+    // First: reset to non-flipping with new prev value
+    setState({ cur: value, prev, flipping: false });
+
+    // Then on next paint, trigger the flip class
+    rafRef.current = requestAnimationFrame(() => {
+      rafRef.current = requestAnimationFrame(() => {
+        setState({ cur: value, prev, flipping: true });
+        timerRef.current = setTimeout(() => {
+          setState(s => ({ ...s, flipping: false }));
+        }, 500);
       });
-    }
+    });
   }, [value]);
 
-  useEffect(() => () => clearTimeout(timerRef.current), []);
+  useEffect(() => () => {
+    clearTimeout(timerRef.current);
+    cancelAnimationFrame(rafRef.current);
+  }, []);
+
+  const { cur, prev, flipping } = state;
 
   return (
     <div className="flip-digit">
-      <div className="flip-card flip-top-static"><span>{value}</span></div>
-      <div className="flip-card flip-bottom-static"><span>{value}</span></div>
-      {flipping && (
-        <>
-          <div className="flip-card flip-top-anim" key={`t${value}${displayPrev}`}>
-            <span>{displayPrev}</span>
-          </div>
-          <div className="flip-card flip-bottom-anim" key={`b${value}`}>
-            <span>{value}</span>
-          </div>
-        </>
-      )}
+      {/* Static top — always shows current */}
+      <div className="flip-card flip-top-static">
+        <span>{cur}</span>
+      </div>
+      {/* Static bottom — always shows current */}
+      <div className="flip-card flip-bottom-static">
+        <span>{cur}</span>
+      </div>
+      {/* Animated top — shows prev, folds away. Always mounted, class triggers anim */}
+      <div className={`flip-card flip-top-anim ${flipping ? 'flip-top-anim--go' : ''}`}>
+        <span>{flipping ? prev : cur}</span>
+      </div>
+      {/* Animated bottom — shows cur, unfolds in. Always mounted */}
+      <div className={`flip-card flip-bottom-anim ${flipping ? 'flip-bottom-anim--go' : ''}`}>
+        <span>{cur}</span>
+      </div>
     </div>
   );
 }
@@ -62,6 +81,7 @@ function Sep() {
   );
 }
 
+// ── Clock ──
 function ClockFace() {
   const [time, setTime] = useState(new Date());
   useEffect(() => {
@@ -88,6 +108,7 @@ function ClockFace() {
   );
 }
 
+// ── Stopwatch ──
 function StopwatchFace() {
   const [elapsed, setElapsed] = useState(0);
   const [running, setRunning] = useState(false);
@@ -121,9 +142,7 @@ function StopwatchFace() {
 
   return (
     <>
-      <div className="flipclock-meta">
-        <span className="fc-day">STOPWATCH</span>
-      </div>
+      <div className="flipclock-meta"><span className="fc-day">STOPWATCH</span></div>
       <div className="flipclock-digits">
         {h > 0 && <><FlipPair value={h} /><Sep /></>}
         <FlipPair value={m} />
@@ -143,6 +162,7 @@ function StopwatchFace() {
   );
 }
 
+// ── Timer ──
 function TimerFace() {
   const [setting, setSetting] = useState(true);
   const [inputMin, setInputMin] = useState(5);
@@ -186,9 +206,7 @@ function TimerFace() {
 
   if (setting) return (
     <>
-      <div className="flipclock-meta">
-        <span className="fc-day">TIMER</span>
-      </div>
+      <div className="flipclock-meta"><span className="fc-day">TIMER</span></div>
       <div className="fc-setup">
         <div className="fc-setup-row">
           <button className="fc-adj" onClick={() => setInputMin(v => Math.max(1, v - 5))}>−5</button>
@@ -224,17 +242,59 @@ function TimerFace() {
   );
 }
 
+// ── Main ──
 export default function FlipClock({ onClose }) {
   const [mode, setMode] = useState('clock');
+  const overlayRef = useRef(null);
 
   useEffect(() => {
+    // Request fullscreen — hides browser UI on mobile
+    const el = overlayRef.current || document.documentElement;
+    const requestFS =
+      el.requestFullscreen ||
+      el.webkitRequestFullscreen ||
+      el.mozRequestFullScreen ||
+      el.msRequestFullscreen;
+
+    if (requestFS) {
+      requestFS.call(el).catch(() => {}); // silently fail if not allowed
+    }
+
+    // Lock body scroll
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = prev; };
+
+    // Exit fullscreen on close
+    return () => {
+      document.body.style.overflow = prev;
+      const exitFS =
+        document.exitFullscreen ||
+        document.webkitExitFullscreen ||
+        document.mozCancelFullScreen ||
+        document.msExitFullscreen;
+      if (exitFS && document.fullscreenElement) {
+        exitFS.call(document).catch(() => {});
+      }
+    };
+  }, []);
+
+  // Also close if user manually exits fullscreen (e.g. swipe up on iOS)
+  useEffect(() => {
+    const onFSChange = () => {
+      if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+        // Don't auto-close, just let them stay — they can tap outside
+      }
+    };
+    document.addEventListener('fullscreenchange', onFSChange);
+    document.addEventListener('webkitfullscreenchange', onFSChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', onFSChange);
+      document.removeEventListener('webkitfullscreenchange', onFSChange);
+    };
   }, []);
 
   return (
-    <div className="flipclock-overlay" onClick={onClose}>
+    <div className="flipclock-overlay" ref={overlayRef} onClick={onClose}>
       <div className="flipclock-inner" onClick={e => e.stopPropagation()}>
         {mode === 'clock'     && <ClockFace />}
         {mode === 'stopwatch' && <StopwatchFace />}
@@ -245,7 +305,7 @@ export default function FlipClock({ onClose }) {
             <button
               key={tab}
               className={`fc-tab ${mode === tab ? 'fc-tab--active' : ''}`}
-              onClick={() => setMode(tab)}
+              onClick={e => { e.stopPropagation(); setMode(tab); }}
             >
               {tab === 'clock' ? 'CLOCK' : tab === 'stopwatch' ? 'STOPWATCH' : 'TIMER'}
             </button>
