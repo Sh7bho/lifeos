@@ -8,6 +8,9 @@ import Setup from './components/Setup';
 import NavBar from './components/NavBar';
 import './App.css';
 
+// Silent WAV — keeps iOS audio session alive so JS isn't suspended when screen locks
+const SILENT_WAV = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAAABkYXRhAAAAAA==';
+
 function App() {
   const [view, setView] = useState('dashboard');
   const [isSetup, setIsSetup] = useState(false);
@@ -18,14 +21,17 @@ function App() {
   // Audio element for uploaded files — never unmounts
   const audioRef = useRef(null);
 
-  // YouTube IFrame Player API
-  const ytPlayerRef = useRef(null);       // YT.Player instance
-  const ytContainerRef = useRef(null);    // div the player mounts into
-  const ytApiReady = useRef(false);
-  const ytPendingRef = useRef(null);      // track to load once API is ready
-  const onYtEndedRef = useRef(null);      // callback set by Music.js via playerState
+  // Silent audio element — keeps iOS audio session alive during YouTube playback
+  const keepaliveRef = useRef(null);
 
-  // Load YouTube IFrame API script once
+  // YouTube IFrame Player API
+  const ytPlayerRef = useRef(null);
+  const ytContainerRef = useRef(null);
+  const ytApiReady = useRef(false);
+  const ytPendingRef = useRef(null);
+
+  // ── YouTube IFrame API ──────────────────────────────────────────────────────
+
   useEffect(() => {
     if (window.YT && window.YT.Player) { ytApiReady.current = true; return; }
     const tag = document.createElement('script');
@@ -58,9 +64,8 @@ function App() {
             e.target.playVideo();
           },
           onStateChange: (e) => {
-            // YT.PlayerState.ENDED === 0
             if (e.data === 0) {
-              // Tell Music.js a YouTube track ended
+              // YT track ended — signal Music.js
               setPlayerState(prev => ({ ...prev, _ytEnded: Date.now() }));
             }
           },
@@ -69,30 +74,31 @@ function App() {
     }
   }
 
-  // When track changes — load into YT player or audio element
+  // ── Track / play / volume sync ──────────────────────────────────────────────
+
   useEffect(() => {
     const track = playerState.currentTrack;
     const el = audioRef.current;
 
     if (!track) {
-      // Stop everything
       el?.pause();
       ytPlayerRef.current?.pauseVideo?.();
+      stopKeepalive();
       return;
     }
 
     if (track.audio_url) {
-      // Uploaded file — use audio element
       ytPlayerRef.current?.pauseVideo?.();
+      stopKeepalive();
       if (el && el.src !== track.audio_url) el.src = track.audio_url;
     } else if (track.youtubeId) {
-      // YouTube — use IFrame API
       el?.pause();
       loadYTTrack(track);
+      // Start keepalive so iOS doesn't suspend JS while YouTube plays
+      startKeepalive();
     }
   }, [playerState.currentTrack?.audio_url, playerState.currentTrack?.youtubeId]);
 
-  // Play / pause sync
   useEffect(() => {
     const track = playerState.currentTrack;
     const el = audioRef.current;
@@ -102,12 +108,16 @@ function App() {
       if (playerState.playing) el?.play().catch(() => {});
       else el?.pause();
     } else if (track.youtubeId) {
-      if (playerState.playing) ytPlayerRef.current?.playVideo?.();
-      else ytPlayerRef.current?.pauseVideo?.();
+      if (playerState.playing) {
+        ytPlayerRef.current?.playVideo?.();
+        startKeepalive();
+      } else {
+        ytPlayerRef.current?.pauseVideo?.();
+        stopKeepalive();
+      }
     }
   }, [playerState.playing, playerState.currentTrack?.audio_url, playerState.currentTrack?.youtubeId]);
 
-  // Volume sync
   useEffect(() => {
     if (audioRef.current && playerState.volume !== undefined) {
       audioRef.current.volume = playerState.volume / 100;
@@ -117,18 +127,87 @@ function App() {
     }
   }, [playerState.volume]);
 
-  function handleLogDone() {
-    setRefreshKey(k => k + 1);
-    setView('dashboard');
+  // ── iOS keepalive helpers ───────────────────────────────────────────────────
+
+  function startKeepalive() {
+    const el = keepaliveRef.current;
+    if (!el || !el.paused) return;
+    el.play().catch(() => {});
   }
+
+  function stopKeepalive() {
+    const el = keepaliveRef.current;
+    if (!el || el.paused) return;
+    el.pause();
+    el.currentTime = 0;
+  }
+
+  // ── Media Session API ───────────────────────────────────────────────────────
+  // Enables lock-screen controls, headphone gestures, and CarPlay/Android Auto
+
+  useEffect(() => {
+    if (!('mediaSession' in navigator)) return;
+    const track = playerState.currentTrack;
+
+    if (!track) {
+      navigator.mediaSession.playbackState = 'none';
+      return;
+    }
+
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: track.title || 'Unknown',
+      artist: track.artist || '',
+      album: '',
+      artwork: track.thumb
+        ? [
+            { src: track.thumb, sizes: '320x180', type: 'image/jpeg' },
+            { src: track.thumb, sizes: '640x360', type: 'image/jpeg' },
+          ]
+        : [],
+    });
+
+    navigator.mediaSession.playbackState = playerState.playing ? 'playing' : 'paused';
+
+    navigator.mediaSession.setActionHandler('play', () => {
+      handlePlayerChange({ playing: true });
+    });
+    navigator.mediaSession.setActionHandler('pause', () => {
+      handlePlayerChange({ playing: false });
+    });
+    navigator.mediaSession.setActionHandler('stop', () => {
+      handlePlayerChange({ currentTrack: null, playing: false });
+    });
+    // nexttrack / previoustrack — handled by Music.js via _skipNext / _skipPrev signals
+    navigator.mediaSession.setActionHandler('nexttrack', () => {
+      handlePlayerChange({ _skipNext: Date.now() });
+    });
+    navigator.mediaSession.setActionHandler('previoustrack', () => {
+      handlePlayerChange({ _skipPrev: Date.now() });
+    });
+
+    return () => {
+      // Clean up handlers when track changes
+      ['play', 'pause', 'stop', 'nexttrack', 'previoustrack'].forEach(action => {
+        try { navigator.mediaSession.setActionHandler(action, null); } catch {}
+      });
+    };
+  }, [playerState.currentTrack, playerState.playing]);
+
+  // ── Player change handler ───────────────────────────────────────────────────
 
   function handlePlayerChange(changes) {
     setPlayerState(prev => ({ ...prev, ...changes }));
-    // YouTube repeat — seek to 0 and replay
     if (changes._ytRepeat && ytPlayerRef.current?.seekTo) {
       ytPlayerRef.current.seekTo(0);
       ytPlayerRef.current.playVideo();
     }
+  }
+
+  // ── Misc ────────────────────────────────────────────────────────────────────
+
+  function handleLogDone() {
+    setRefreshKey(k => k + 1);
+    setView('dashboard');
   }
 
   if (isSetup) return <Setup />;
@@ -144,7 +223,15 @@ function App() {
         onEnded={() => handlePlayerChange({ _audioEnded: Date.now() })}
       />
 
-      {/* YouTube IFrame API container — always mounted, never re-creates the player */}
+      {/* Silent looping audio — keeps iOS audio session alive during YouTube playback */}
+      <audio
+        ref={keepaliveRef}
+        src={SILENT_WAV}
+        loop
+        style={{ display: 'none' }}
+      />
+
+      {/* YouTube IFrame API container — always mounted */}
       <div
         style={{ position: 'fixed', width: 1, height: 1, overflow: 'hidden', opacity: 0, top: -999, left: -999, pointerEvents: 'none' }}
       >
