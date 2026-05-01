@@ -11,10 +11,6 @@ const CURATED = [
   { id: 'boss',  label: 'BOSS MINDSET',     icon: '📈', color: '#C8A96E' },
 ];
 
-// Crossfade duration in seconds — applied to uploaded audio tracks only
-// (YouTube audio pipeline is inaccessible, so crossfade there is impossible)
-const CROSSFADE_SECONDS = 3;
-
 function extractYouTubeId(url) {
   const patterns = [
     /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,
@@ -274,9 +270,7 @@ export default function Music({ playerState, onPlayerChange, audioRef }) {
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
 
-  // Crossfade timer ref only — we use volume property directly, NOT Web Audio API
-  // (createMediaElementSource can only be called once per element; calling it again silences audio)
-  const crossfadeTimerRef = useRef(null);
+
 
   // Persist volume
   useEffect(() => { localStorage.setItem('musicVolume', volume); }, [volume]);
@@ -293,50 +287,10 @@ export default function Music({ playerState, onPlayerChange, audioRef }) {
   useEffect(() => { tabRef.current = tab; }, [tab]);
   useEffect(() => { tracksRef.current = tracks; }, [tracks]);
 
-  // ── Crossfade helpers (audio tracks only) ──────────────────────────────────
-  // Uses the audio element's volume property directly — safe to call repeatedly,
-  // unlike createMediaElementSource which can only be called once per element.
-
-  function startCrossfade(onComplete) {
-    clearTimeout(crossfadeTimerRef.current);
-    const el = audioRef?.current;
-    if (!el || el.paused) { onComplete(); return; }
-
-    const steps = 20;
-    const stepMs = (CROSSFADE_SECONDS * 1000) / steps;
-    const startVol = el.volume;
-    let step = 0;
-
-    const fade = setInterval(() => {
-      step++;
-      el.volume = Math.max(0, startVol * (1 - step / steps));
-      if (step >= steps) {
-        clearInterval(fade);
-        el.volume = 0;
-      }
-    }, stepMs);
-
-    // Fire the next-track callback at the midpoint so it overlaps
-    crossfadeTimerRef.current = setTimeout(() => {
-      crossfadeTimerRef.current = null;
-      onComplete();
-    }, (CROSSFADE_SECONDS / 2) * 1000);
-  }
-
-  function cancelCrossfade() {
-    clearTimeout(crossfadeTimerRef.current);
-    crossfadeTimerRef.current = null;
-    // Restore volume to user preference
-    if (audioRef?.current) {
-      audioRef.current.volume = (playerState.volume ?? volume) / 100;
-    }
-  }
-
   // ── Track ended logic ───────────────────────────────────────────────────────
 
   function handleTrackEnded() {
     setProgress(0);
-    cancelCrossfade();
 
     if (playModeRef.current === 'repeat') {
       const el = audioRef?.current;
@@ -375,25 +329,10 @@ export default function Music({ playerState, onPlayerChange, audioRef }) {
           });
         } catch {}
       }
-
-      // Trigger crossfade when close to end (audio tracks only, not repeat mode)
-      if (
-        el.duration > CROSSFADE_SECONDS * 2 &&
-        el.duration - el.currentTime <= CROSSFADE_SECONDS &&
-        playModeRef.current !== 'repeat' &&
-        crossfadeTimerRef.current === null
-      ) {
-        const nextTrack = getNextTrackFromRefs(1);
-        if (nextTrack?.audio_url) {
-          startCrossfade(() => {
-            playTrack(nextTrack, getTabColor(tabRef.current));
-          });
-        }
-      }
     };
 
     const onMeta  = () => setDuration(el.duration);
-    const onEnded = () => { crossfadeTimerRef.current = null; handleTrackEnded(); };
+    const onEnded = () => handleTrackEnded();
 
     el.addEventListener('timeupdate', onTimeUpdate);
     el.addEventListener('loadedmetadata', onMeta);
@@ -430,7 +369,6 @@ export default function Music({ playerState, onPlayerChange, audioRef }) {
 
   function handleSeek(val) {
     setProgress(val);
-    cancelCrossfade(); // cancel any in-progress crossfade when user scrubs
     if (audioRef.current && duration) {
       audioRef.current.currentTime = (val / 100) * duration;
     }
@@ -503,7 +441,6 @@ export default function Music({ playerState, onPlayerChange, audioRef }) {
   }
 
   function skipTrack(dir) {
-    cancelCrossfade();
     const next = getNextTrackFromRefs(dir);
     if (next) playTrack(next, getTabColor(tabRef.current));
   }
@@ -566,7 +503,6 @@ export default function Music({ playerState, onPlayerChange, audioRef }) {
   }
 
   function playTrack(track, color) {
-    cancelCrossfade();
     const t = { ...track, youtubeId: track.youtubeId || track.youtube_id, color };
     onPlayerChange({ currentTrack: t, playing: true });
   }
