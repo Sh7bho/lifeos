@@ -6,6 +6,7 @@ import AICoach from './components/AICoach';
 import Music from './components/Music';
 import Setup from './components/Setup';
 import NavBar from './components/NavBar';
+import LearnOS from './components/LearnOS';
 import './App.css';
 
 // Silent WAV — keeps iOS audio session alive so JS isn't suspended when screen locks
@@ -15,6 +16,7 @@ function App() {
   const [view, setView] = useState('dashboard');
   const [isSetup, setIsSetup] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [learnMode, setLearnMode] = useState(false);
 
   const [playerState, setPlayerState] = useState({ currentTrack: null, playing: false });
 
@@ -65,7 +67,6 @@ function App() {
           },
           onStateChange: (e) => {
             if (e.data === 0) {
-              // YT track ended — signal Music.js
               setPlayerState(prev => ({ ...prev, _ytEnded: Date.now() }));
             }
           },
@@ -94,7 +95,6 @@ function App() {
     } else if (track.youtubeId) {
       el?.pause();
       loadYTTrack(track);
-      // Start keepalive so iOS doesn't suspend JS while YouTube plays
       startKeepalive();
     }
   }, [playerState.currentTrack?.audio_url, playerState.currentTrack?.youtubeId]);
@@ -143,7 +143,6 @@ function App() {
   }
 
   // ── Media Session API ───────────────────────────────────────────────────────
-  // Enables lock-screen controls, headphone gestures, and CarPlay/Android Auto
 
   useEffect(() => {
     if (!('mediaSession' in navigator)) return;
@@ -168,25 +167,13 @@ function App() {
 
     navigator.mediaSession.playbackState = playerState.playing ? 'playing' : 'paused';
 
-    navigator.mediaSession.setActionHandler('play', () => {
-      handlePlayerChange({ playing: true });
-    });
-    navigator.mediaSession.setActionHandler('pause', () => {
-      handlePlayerChange({ playing: false });
-    });
-    navigator.mediaSession.setActionHandler('stop', () => {
-      handlePlayerChange({ currentTrack: null, playing: false });
-    });
-    // nexttrack / previoustrack — handled by Music.js via _skipNext / _skipPrev signals
-    navigator.mediaSession.setActionHandler('nexttrack', () => {
-      handlePlayerChange({ _skipNext: Date.now() });
-    });
-    navigator.mediaSession.setActionHandler('previoustrack', () => {
-      handlePlayerChange({ _skipPrev: Date.now() });
-    });
+    navigator.mediaSession.setActionHandler('play', () => handlePlayerChange({ playing: true }));
+    navigator.mediaSession.setActionHandler('pause', () => handlePlayerChange({ playing: false }));
+    navigator.mediaSession.setActionHandler('stop', () => handlePlayerChange({ currentTrack: null, playing: false }));
+    navigator.mediaSession.setActionHandler('nexttrack', () => handlePlayerChange({ _skipNext: Date.now() }));
+    navigator.mediaSession.setActionHandler('previoustrack', () => handlePlayerChange({ _skipPrev: Date.now() }));
 
     return () => {
-      // Clean up handlers when track changes
       ['play', 'pause', 'stop', 'nexttrack', 'previoustrack'].forEach(action => {
         try { navigator.mediaSession.setActionHandler(action, null); } catch {}
       });
@@ -217,25 +204,18 @@ function App() {
       <div className="noise-overlay" />
 
       {/* Persistent audio element for uploaded files */}
-      <audio
-        ref={audioRef}
-        style={{ display: 'none' }}
-      />
+      <audio ref={audioRef} style={{ display: 'none' }} />
 
       {/* Silent looping audio — keeps iOS audio session alive during YouTube playback */}
-      <audio
-        ref={keepaliveRef}
-        src={SILENT_WAV}
-        loop
-        style={{ display: 'none' }}
-      />
+      <audio ref={keepaliveRef} src={SILENT_WAV} loop style={{ display: 'none' }} />
 
       {/* YouTube IFrame API container — always mounted */}
-      <div
-        style={{ position: 'fixed', width: 1, height: 1, overflow: 'hidden', opacity: 0, top: -999, left: -999, pointerEvents: 'none' }}
-      >
+      <div style={{ position: 'fixed', width: 1, height: 1, overflow: 'hidden', opacity: 0, top: -999, left: -999, pointerEvents: 'none' }}>
         <div ref={ytContainerRef} id="yt-player-container" />
       </div>
+
+      {/* Learn Mode overlay */}
+      {learnMode && <LearnOS onClose={() => setLearnMode(false)} />}
 
       {/* Mini now-playing pill */}
       {playerState.currentTrack && view !== 'music' && view !== 'coach' && (
@@ -303,7 +283,13 @@ function App() {
         </div>
       </div>
 
-      <NavBar active={view} onNavigate={setView} playerState={playerState} />
+      <NavBar
+        active={view}
+        onNavigate={setView}
+        playerState={playerState}
+        learnMode={learnMode}
+        onLearnToggle={() => setLearnMode(prev => !prev)}
+      />
     </div>
   );
 }
