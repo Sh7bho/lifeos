@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import './Music.css';
 
@@ -289,8 +289,9 @@ export default function Music({ playerState, onPlayerChange, audioRef }) {
 
   // ── Track ended logic ───────────────────────────────────────────────────────
 
-  function handleTrackEnded() {
+  const handleTrackEnded = useCallback(() => {
     setProgress(0);
+    setDuration(0);
 
     if (playModeRef.current === 'repeat') {
       const el = audioRef?.current;
@@ -304,9 +305,12 @@ export default function Music({ playerState, onPlayerChange, audioRef }) {
     }
 
     const next = getNextTrackFromRefs(1);
-    if (next) playTrack(next, getTabColor(tabRef.current));
-    else onPlayerChange({ currentTrack: null, playing: false });
-  }
+    if (next) {
+      playTrackRef.current(next, getTabColor(tabRef.current));
+    } else {
+      onPlayerChange({ currentTrack: null, playing: false });
+    }
+  }, [audioRef, onPlayerChange]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Wire audio element events ───────────────────────────────────────────────
 
@@ -315,7 +319,7 @@ export default function Music({ playerState, onPlayerChange, audioRef }) {
     if (!el) return;
 
     const onTimeUpdate = () => {
-      if (!el.duration) return;
+      if (!el.duration || isNaN(el.duration)) return;
       const pct = (el.currentTime / el.duration) * 100;
       setProgress(pct);
 
@@ -331,38 +335,50 @@ export default function Music({ playerState, onPlayerChange, audioRef }) {
       }
     };
 
-    const onMeta  = () => setDuration(el.duration);
+    const onMeta  = () => {
+      if (!isNaN(el.duration)) setDuration(el.duration);
+    };
     const onEnded = () => handleTrackEnded();
+
+    // Reset on new src load
+    const onEmptied = () => { setProgress(0); setDuration(0); };
 
     el.addEventListener('timeupdate', onTimeUpdate);
     el.addEventListener('loadedmetadata', onMeta);
     el.addEventListener('ended', onEnded);
+    el.addEventListener('emptied', onEmptied);
     return () => {
       el.removeEventListener('timeupdate', onTimeUpdate);
       el.removeEventListener('loadedmetadata', onMeta);
       el.removeEventListener('ended', onEnded);
+      el.removeEventListener('emptied', onEmptied);
     };
-  }, [audioRef]);
+  }, [audioRef, handleTrackEnded]);
 
   // ── YouTube ended signal from App.js ────────────────────────────────────────
 
+  const handleTrackEndedRef = useRef(handleTrackEnded);
+  useEffect(() => { handleTrackEndedRef.current = handleTrackEnded; }, [handleTrackEnded]);
+
   useEffect(() => {
     if (!playerState._ytEnded) return;
-    handleTrackEnded();
+    handleTrackEndedRef.current();
   }, [playerState._ytEnded]);
 
   // ── Skip signals from App.js (Media Session nexttrack/previoustrack) ────────
   // These fire even when the screen is locked or the app is backgrounded,
   // because App.js registers them with the OS via the Media Session API.
 
+  const skipTrackRef = useRef(null); // forward-declared below
+
   useEffect(() => {
     if (!playerState._skipNext) return;
-    skipTrack(1);
+    skipTrackRef.current?.(1);
   }, [playerState._skipNext]);
 
   useEffect(() => {
     if (!playerState._skipPrev) return;
-    skipTrack(-1);
+    skipTrackRef.current?.(-1);
   }, [playerState._skipPrev]);
 
   // ── Seek ───────────────────────────────────────────────────────────────────
@@ -383,10 +399,18 @@ export default function Music({ playerState, onPlayerChange, audioRef }) {
 
   // ── Queue ──────────────────────────────────────────────────────────────────
 
+  // Rebuild queue only when the *current tab's* track list is freshly loaded
+  // (i.e. went from undefined/empty to populated), so manual reordering is preserved.
+  const prevTabTracksLen = useRef({});
   useEffect(() => {
     const list = getAllTracksForTab(tab);
-    setQueue(list.map((t, i) => ({ ...t, _qi: i })));
-  }, [tab, tracks]);
+    const prev = prevTabTracksLen.current[tab];
+    // Rebuild if: switched tabs, or this tab's tracks just loaded for the first time
+    if (prev === undefined || (prev === 0 && list.length > 0)) {
+      setQueue(list.map((t, i) => ({ ...t, _qi: i })));
+    }
+    prevTabTracksLen.current[tab] = list.length;
+  }, [tab, tracks]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function cyclePlayMode() {
     setPlayMode(m => m === 'queue' ? 'shuffle' : m === 'shuffle' ? 'repeat' : 'queue');
@@ -442,8 +466,10 @@ export default function Music({ playerState, onPlayerChange, audioRef }) {
 
   function skipTrack(dir) {
     const next = getNextTrackFromRefs(dir);
-    if (next) playTrack(next, getTabColor(tabRef.current));
+    if (next) playTrackRef.current?.(next, getTabColor(tabRef.current));
   }
+  // Keep ref in sync so handleTrackEnded and skip effects always call latest
+  skipTrackRef.current = skipTrack;
 
   function moveInQueue(from, to) {
     setQueue(prev => {
@@ -502,12 +528,24 @@ export default function Music({ playerState, onPlayerChange, audioRef }) {
     return CURATED.find(p => p.id === tabId)?.color || '#C8A96E';
   }
 
+  const playTrackRef = useRef(null);
   function playTrack(track, color) {
     const t = { ...track, youtubeId: track.youtubeId || track.youtube_id, color };
+    setProgress(0);
+    setDuration(0);
     onPlayerChange({ currentTrack: t, playing: true });
   }
+  playTrackRef.current = playTrack;
 
   function togglePlay() {
+    const el = audioRef?.current;
+    if (el && currentTrack?.audio_url) {
+      if (playing) {
+        el.pause();
+      } else {
+        el.play().catch(() => {});
+      }
+    }
     onPlayerChange({ currentTrack, playing: !playing });
   }
 
@@ -517,14 +555,20 @@ export default function Music({ playerState, onPlayerChange, audioRef }) {
       ...prev,
       [tab]: (prev[tab] || []).filter(t => t.id !== track.id),
     }));
+    setQueue(prev => prev.filter(t => t.id !== track.id));
     if (currentTrack?.id === track.id) onPlayerChange({ currentTrack: null, playing: false });
   }
 
   function handleAdd(newTrack) {
+    const t = { ...newTrack, youtubeId: newTrack.youtubeId || newTrack.youtube_id };
     setTracks(prev => ({
       ...prev,
-      [newTrack.playlist]: [newTrack, ...(prev[newTrack.playlist] || [])],
+      [newTrack.playlist]: [t, ...(prev[newTrack.playlist] || [])],
     }));
+    // Append to queue so the new track is immediately available for playback
+    if (newTrack.playlist === tab) {
+      setQueue(prev => [{ ...t, _qi: 0 }, ...prev.map((x, i) => ({ ...x, _qi: i + 1 }))]);
+    }
   }
 
   const displayTracks = getAllTracksForTab(tab);
