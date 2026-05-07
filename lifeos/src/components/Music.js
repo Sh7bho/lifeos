@@ -59,7 +59,67 @@ async function uploadAudio(file) {
   return data.publicUrl;
 }
 
-// ── Equalizer ──
+// ── Offline Audio Cache (Cache API) ───────────────────────────────────────────
+
+const AUDIO_CACHE = 'lifeos-audio-v1';
+
+async function getCachedAudioUrl(remoteUrl) {
+  try {
+    const cache = await caches.open(AUDIO_CACHE);
+    const match = await cache.match(remoteUrl);
+    if (match) return URL.createObjectURL(await match.blob());
+    return null;
+  } catch { return null; }
+}
+
+async function cacheAudioTrack(remoteUrl, onProgress) {
+  try {
+    const cache = await caches.open(AUDIO_CACHE);
+    // Already cached?
+    const existing = await cache.match(remoteUrl);
+    if (existing) return true;
+
+    // Fetch with progress
+    const res = await fetch(remoteUrl);
+    if (!res.ok) return false;
+    const contentLength = res.headers.get('content-length');
+    const total = contentLength ? parseInt(contentLength) : 0;
+    const reader = res.body.getReader();
+    const chunks = [];
+    let received = 0;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+      received += value.length;
+      if (total && onProgress) onProgress(Math.round((received / total) * 100));
+    }
+
+    const blob = new Blob(chunks);
+    const cacheRes = new Response(blob, { headers: { 'Content-Type': res.headers.get('Content-Type') || 'audio/mpeg' } });
+    await cache.put(remoteUrl, cacheRes);
+    if (onProgress) onProgress(100);
+    return true;
+  } catch { return false; }
+}
+
+async function removeCachedAudio(remoteUrl) {
+  try {
+    const cache = await caches.open(AUDIO_CACHE);
+    await cache.delete(remoteUrl);
+  } catch {}
+}
+
+async function getAllCachedUrls() {
+  try {
+    const cache = await caches.open(AUDIO_CACHE);
+    const keys = await cache.keys();
+    return new Set(keys.map(r => r.url));
+  } catch { return new Set(); }
+}
+
+
 function EqBars({ color }) {
   return (
     <div className="eq-bars">
@@ -269,6 +329,14 @@ export default function Music({ playerState, onPlayerChange, audioRef }) {
 
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [cachedUrls, setCachedUrls] = useState(new Set());
+  const [cachingId, setCachingId] = useState(null); // track id currently being cached
+  const [cacheProgress, setCacheProgress] = useState(0);
+
+  // Load cached URLs on mount
+  useEffect(() => {
+    getAllCachedUrls().then(urls => setCachedUrls(urls));
+  }, []);
 
 
 
@@ -529,13 +597,42 @@ export default function Music({ playerState, onPlayerChange, audioRef }) {
   }
 
   const playTrackRef = useRef(null);
-  function playTrack(track, color) {
-    const t = { ...track, youtubeId: track.youtubeId || track.youtube_id, color };
+  async function playTrack(track, color) {
+    let t = { ...track, youtubeId: track.youtubeId || track.youtube_id, color };
+
+    // For audio tracks, try to serve from cache first, else auto-cache in background
+    if (t.audio_url) {
+      const localUrl = await getCachedAudioUrl(t.audio_url);
+      if (localUrl) {
+        t = { ...t, _localUrl: localUrl };
+      } else if (navigator.onLine) {
+        // Auto-cache in background after playback starts
+        setTimeout(() => handleCacheTrack(track), 2000);
+      }
+    }
+
     setProgress(0);
     setDuration(0);
     onPlayerChange({ currentTrack: t, playing: true });
   }
   playTrackRef.current = playTrack;
+
+  async function handleCacheTrack(track) {
+    if (!track.audio_url || cachingId === track.id) return;
+    if (cachedUrls.has(track.audio_url)) return;
+    setCachingId(track.id);
+    setCacheProgress(0);
+    const ok = await cacheAudioTrack(track.audio_url, p => setCacheProgress(p));
+    if (ok) setCachedUrls(prev => new Set([...prev, track.audio_url]));
+    setCachingId(null);
+    setCacheProgress(0);
+  }
+
+  async function handleUncacheTrack(track) {
+    if (!track.audio_url) return;
+    await removeCachedAudio(track.audio_url);
+    setCachedUrls(prev => { const s = new Set(prev); s.delete(track.audio_url); return s; });
+  }
 
   function togglePlay() {
     const el = audioRef?.current;
@@ -551,11 +648,13 @@ export default function Music({ playerState, onPlayerChange, audioRef }) {
 
   function handleDelete(track) {
     deleteTrack(track.id, track.audio_url);
+    if (track.audio_url) removeCachedAudio(track.audio_url);
     setTracks(prev => ({
       ...prev,
       [tab]: (prev[tab] || []).filter(t => t.id !== track.id),
     }));
     setQueue(prev => prev.filter(t => t.id !== track.id));
+    setCachedUrls(prev => { const s = new Set(prev); s.delete(track.audio_url); return s; });
     if (currentTrack?.id === track.id) onPlayerChange({ currentTrack: null, playing: false });
   }
 
@@ -762,6 +861,8 @@ export default function Music({ playerState, onPlayerChange, audioRef }) {
             (ytId && currentTrack.youtubeId === ytId) ||
             (track.audio_url && currentTrack.audio_url === track.audio_url)
           );
+          const isCached = track.audio_url && cachedUrls.has(track.audio_url);
+          const isCaching = cachingId === track.id;
 
           return (
             <div
@@ -785,12 +886,39 @@ export default function Music({ playerState, onPlayerChange, audioRef }) {
               <div className="track-row-info" onClick={() => playTrack(track, tabColor)}>
                 <div className="track-row-title">{track.title}</div>
                 <div className="track-row-artist">
-                  {track.audio_url && <span className="track-local-tag">LOCAL</span>}
+                  {track.audio_url && (
+                    isCached
+                      ? <span className="track-offline-tag">✓ OFFLINE</span>
+                      : <span className="track-local-tag">LOCAL</span>
+                  )}
                   {track.artist}
                 </div>
+                {isCaching && (
+                  <div className="track-cache-progress">
+                    <div className="track-cache-bar" style={{ width: `${cacheProgress}%` }} />
+                  </div>
+                )}
               </div>
 
               <div className="track-row-actions">
+                {track.audio_url && !isCaching && (
+                  isCached ? (
+                    <button
+                      className="track-cache-btn track-cache-btn--cached"
+                      onClick={() => handleUncacheTrack(track)}
+                      title="Remove offline copy"
+                    >⊗</button>
+                  ) : (
+                    <button
+                      className="track-cache-btn"
+                      onClick={() => handleCacheTrack(track)}
+                      title="Save for offline"
+                    >↓</button>
+                  )
+                )}
+                {isCaching && (
+                  <div className="track-cache-spinner" />
+                )}
                 {track.id && (
                   <button className="track-delete-btn" onClick={() => handleDelete(track)}>✕</button>
                 )}
