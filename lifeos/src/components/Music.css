@@ -1139,7 +1139,75 @@
 .modal-save-btn:not(:disabled):active { transform: scale(0.98); }
 .modal-save-arrow { font-size: 16px; }
 
-/* ── Hidden YouTube iframe ── */
+/* ── Offline cache controls ── */
+.track-offline-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  border-radius: 99px;
+  background: rgba(100, 220, 140, 0.1);
+  border: 1px solid rgba(100, 220, 140, 0.3);
+  color: #64dc8c;
+  font-family: var(--font-mono);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  margin-right: 6px;
+}
+
+.track-cache-btn {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.04);
+  color: rgba(255,255,255,0.4);
+  font-size: 14px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+.track-cache-btn:hover {
+  background: rgba(200,169,110,0.12);
+  border-color: rgba(200,169,110,0.4);
+  color: #C8A96E;
+}
+.track-cache-btn--cached {
+  border-color: rgba(100,220,140,0.3);
+  background: rgba(100,220,140,0.08);
+  color: #64dc8c;
+}
+.track-cache-btn--cached:hover {
+  background: rgba(255,80,80,0.1);
+  border-color: rgba(255,80,80,0.3);
+  color: #ff6060;
+}
+
+.track-cache-spinner {
+  width: 20px; height: 20px;
+  border: 2px solid rgba(200,169,110,0.15);
+  border-top-color: #C8A96E;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+.track-cache-progress {
+  height: 2px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 99px;
+  overflow: hidden;
+  margin-top: 5px;
+  width: 100%;
+}
+.track-cache-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #E8D5A3, #C8A96E);
+  border-radius: 99px;
+  transition: width 0.3s ease;
+}
+
+
 .yt-hidden {
   position: fixed;
   width: 1px; height: 1px;
