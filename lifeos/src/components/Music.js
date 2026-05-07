@@ -310,7 +310,7 @@ export default function Music({ playerState, onPlayerChange, audioRef }) {
     } else {
       onPlayerChange({ currentTrack: null, playing: false });
     }
-  }, [audioRef, onPlayerChange]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [audioRef, onPlayerChange]);
 
   // ── Wire audio element events ───────────────────────────────────────────────
 
@@ -410,7 +410,7 @@ export default function Music({ playerState, onPlayerChange, audioRef }) {
       setQueue(list.map((t, i) => ({ ...t, _qi: i })));
     }
     prevTabTracksLen.current[tab] = list.length;
-  }, [tab, tracks]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [tab, tracks]);
 
   function cyclePlayMode() {
     setPlayMode(m => m === 'queue' ? 'shuffle' : m === 'shuffle' ? 'repeat' : 'queue');
