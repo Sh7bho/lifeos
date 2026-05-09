@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import BackHeader from './BackHeader';
 import { supabase } from '../lib/supabase';
 
 // ── Supabase helpers ─────────────────────────────────────────────────────────
@@ -457,6 +458,8 @@ export default function FocusTimer({ onNavigate }) {
           to { opacity: 1; transform: translateY(0); }
         }
       `}</style>
+
+      <BackHeader title="Focus" onBack={() => onNavigate('dashboard')} accent="#5BEF8C" />
 
       <div className="ft-wrap">
 
