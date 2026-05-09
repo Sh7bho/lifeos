@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import BackHeader from './BackHeader';
 
 // ── Supabase helpers ─────────────────────────────────────────────────────────
 
@@ -68,7 +69,7 @@ function progressPct(milestones = []) {
 
 // ── Component ────────────────────────────────────────────────────────────────
 
-export default function Goals() {
+export default function Goals({ onNavigate }) {
   const [goals, setGoals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -557,6 +558,8 @@ export default function Goals() {
           to { opacity: 1; transform: translateY(0); }
         }
       `}</style>
+
+      <BackHeader title="Goals" onBack={() => onNavigate('dashboard')} accent="#C45BEF" />
 
       <div className="g-wrap">
 
