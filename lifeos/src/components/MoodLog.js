@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import BackHeader from './BackHeader';
 
 // ── Supabase helpers ─────────────────────────────────────────────────────────
 
@@ -58,7 +59,7 @@ const ENERGY = [
 
 // ── Component ────────────────────────────────────────────────────────────────
 
-export default function MoodLog({ onDone }) {
+export default function MoodLog({ onDone, onNavigate }) {
   const [mood, setMood] = useState(null);
   const [energy, setEnergy] = useState(null);
   const [note, setNote] = useState('');
@@ -489,6 +490,8 @@ export default function MoodLog({ onDone }) {
         .ml-left { animation: fadeUp 0.4s 0.05s both; }
         .ml-right { animation: fadeUp 0.4s 0.15s both; }
       `}</style>
+
+      <BackHeader title="Mood" onBack={() => onNavigate ? onNavigate('dashboard') : onDone?.()} accent="#5B8DEF" />
 
       <div className="ml-wrap">
 
