@@ -7,9 +7,12 @@ import Music from './components/Music';
 import Setup from './components/Setup';
 import NavBar from './components/NavBar';
 import LearnOS from './components/LearnOS';
+import MoodLog from './components/MoodLog';
+import Journal from './components/Journal';
+import FocusTimer from './components/FocusTimer';
+import Goals from './components/Goals';
 import './App.css';
 
-// Silent WAV — keeps iOS audio session alive so JS isn't suspended when screen locks
 const SILENT_WAV = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAAABkYXRhAAAAAA==';
 
 function App() {
@@ -17,16 +20,10 @@ function App() {
   const [isSetup, setIsSetup] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [learnMode, setLearnMode] = useState(false);
-
   const [playerState, setPlayerState] = useState({ currentTrack: null, playing: false });
 
-  // Audio element for uploaded files — never unmounts
   const audioRef = useRef(null);
-
-  // Silent audio element — keeps iOS audio session alive during YouTube playback
   const keepaliveRef = useRef(null);
-
-  // YouTube IFrame Player API
   const ytPlayerRef = useRef(null);
   const ytContainerRef = useRef(null);
   const ytApiReady = useRef(false);
@@ -51,24 +48,16 @@ function App() {
   function loadYTTrack(track) {
     if (!ytApiReady.current) { ytPendingRef.current = track; return; }
     if (!track?.youtubeId) return;
-
     if (ytPlayerRef.current && typeof ytPlayerRef.current.loadVideoById === 'function') {
       ytPlayerRef.current.loadVideoById(track.youtubeId);
     } else {
       ytPlayerRef.current = new window.YT.Player(ytContainerRef.current, {
-        height: '1',
-        width: '1',
-        videoId: track.youtubeId,
+        height: '1', width: '1', videoId: track.youtubeId,
         playerVars: { autoplay: 1, controls: 0, modestbranding: 1, rel: 0, playsinline: 1 },
         events: {
-          onReady: (e) => {
-            e.target.setVolume(playerState.volume ?? 80);
-            e.target.playVideo();
-          },
+          onReady: (e) => { e.target.setVolume(playerState.volume ?? 80); e.target.playVideo(); },
           onStateChange: (e) => {
-            if (e.data === 0) {
-              setPlayerState(prev => ({ ...prev, _ytEnded: Date.now() }));
-            }
+            if (e.data === 0) setPlayerState(prev => ({ ...prev, _ytEnded: Date.now() }));
           },
         },
       });
@@ -80,22 +69,12 @@ function App() {
   useEffect(() => {
     const track = playerState.currentTrack;
     const el = audioRef.current;
-
-    if (!track) {
-      el?.pause();
-      ytPlayerRef.current?.pauseVideo?.();
-      stopKeepalive();
-      return;
-    }
-
+    if (!track) { el?.pause(); ytPlayerRef.current?.pauseVideo?.(); stopKeepalive(); return; }
     if (track.audio_url) {
-      ytPlayerRef.current?.pauseVideo?.();
-      stopKeepalive();
+      ytPlayerRef.current?.pauseVideo?.(); stopKeepalive();
       if (el && el.src !== track.audio_url) el.src = track.audio_url;
     } else if (track.youtubeId) {
-      el?.pause();
-      loadYTTrack(track);
-      startKeepalive();
+      el?.pause(); loadYTTrack(track); startKeepalive();
     }
   }, [playerState.currentTrack?.audio_url, playerState.currentTrack?.youtubeId]);
 
@@ -103,31 +82,22 @@ function App() {
     const track = playerState.currentTrack;
     const el = audioRef.current;
     if (!track) return;
-
     if (track.audio_url) {
-      if (playerState.playing) el?.play().catch(() => {});
-      else el?.pause();
+      if (playerState.playing) el?.play().catch(() => {}); else el?.pause();
     } else if (track.youtubeId) {
-      if (playerState.playing) {
-        ytPlayerRef.current?.playVideo?.();
-        startKeepalive();
-      } else {
-        ytPlayerRef.current?.pauseVideo?.();
-        stopKeepalive();
-      }
+      if (playerState.playing) { ytPlayerRef.current?.playVideo?.(); startKeepalive(); }
+      else { ytPlayerRef.current?.pauseVideo?.(); stopKeepalive(); }
     }
   }, [playerState.playing, playerState.currentTrack?.audio_url, playerState.currentTrack?.youtubeId]);
 
   useEffect(() => {
-    if (audioRef.current && playerState.volume !== undefined) {
+    if (audioRef.current && playerState.volume !== undefined)
       audioRef.current.volume = playerState.volume / 100;
-    }
-    if (ytPlayerRef.current?.setVolume && playerState.volume !== undefined) {
+    if (ytPlayerRef.current?.setVolume && playerState.volume !== undefined)
       ytPlayerRef.current.setVolume(playerState.volume);
-    }
   }, [playerState.volume]);
 
-  // ── iOS keepalive helpers ───────────────────────────────────────────────────
+  // ── iOS keepalive ───────────────────────────────────────────────────────────
 
   function startKeepalive() {
     const el = keepaliveRef.current;
@@ -138,8 +108,7 @@ function App() {
   function stopKeepalive() {
     const el = keepaliveRef.current;
     if (!el || el.paused) return;
-    el.pause();
-    el.currentTime = 0;
+    el.pause(); el.currentTime = 0;
   }
 
   // ── Media Session API ───────────────────────────────────────────────────────
@@ -147,32 +116,20 @@ function App() {
   useEffect(() => {
     if (!('mediaSession' in navigator)) return;
     const track = playerState.currentTrack;
-
-    if (!track) {
-      navigator.mediaSession.playbackState = 'none';
-      return;
-    }
-
+    if (!track) { navigator.mediaSession.playbackState = 'none'; return; }
     navigator.mediaSession.metadata = new MediaMetadata({
-      title: track.title || 'Unknown',
-      artist: track.artist || '',
-      album: '',
-      artwork: track.thumb
-        ? [
-            { src: track.thumb, sizes: '320x180', type: 'image/jpeg' },
-            { src: track.thumb, sizes: '640x360', type: 'image/jpeg' },
-          ]
-        : [],
+      title: track.title || 'Unknown', artist: track.artist || '', album: '',
+      artwork: track.thumb ? [
+        { src: track.thumb, sizes: '320x180', type: 'image/jpeg' },
+        { src: track.thumb, sizes: '640x360', type: 'image/jpeg' },
+      ] : [],
     });
-
     navigator.mediaSession.playbackState = playerState.playing ? 'playing' : 'paused';
-
     navigator.mediaSession.setActionHandler('play', () => handlePlayerChange({ playing: true }));
     navigator.mediaSession.setActionHandler('pause', () => handlePlayerChange({ playing: false }));
     navigator.mediaSession.setActionHandler('stop', () => handlePlayerChange({ currentTrack: null, playing: false }));
     navigator.mediaSession.setActionHandler('nexttrack', () => handlePlayerChange({ _skipNext: Date.now() }));
     navigator.mediaSession.setActionHandler('previoustrack', () => handlePlayerChange({ _skipPrev: Date.now() }));
-
     return () => {
       ['play', 'pause', 'stop', 'nexttrack', 'previoustrack'].forEach(action => {
         try { navigator.mediaSession.setActionHandler(action, null); } catch {}
@@ -180,7 +137,7 @@ function App() {
     };
   }, [playerState.currentTrack, playerState.playing]);
 
-  // ── Player change handler ───────────────────────────────────────────────────
+  // ── Handlers ────────────────────────────────────────────────────────────────
 
   function handlePlayerChange(changes) {
     setPlayerState(prev => ({ ...prev, ...changes }));
@@ -190,31 +147,33 @@ function App() {
     }
   }
 
-  // ── Misc ────────────────────────────────────────────────────────────────────
-
   function handleLogDone() {
     setRefreshKey(k => k + 1);
     setView('dashboard');
   }
 
+  // Views that go back to dashboard on done
+  function handleFeatureDone() {
+    setView('dashboard');
+  }
+
   if (isSetup) return <Setup />;
+
+  // Views that hide the navbar
+  const FULL_VIEWS = ['mood', 'journal', 'focus', 'goals'];
+  const hideNav = FULL_VIEWS.includes(view);
 
   return (
     <div className="app">
       <div className="noise-overlay" />
 
-      {/* Persistent audio element for uploaded files */}
       <audio ref={audioRef} style={{ display: 'none' }} />
-
-      {/* Silent looping audio — keeps iOS audio session alive during YouTube playback */}
       <audio ref={keepaliveRef} src={SILENT_WAV} loop style={{ display: 'none' }} />
 
-      {/* YouTube IFrame API container — always mounted */}
       <div style={{ position: 'fixed', width: 1, height: 1, overflow: 'hidden', opacity: 0, top: -999, left: -999, pointerEvents: 'none' }}>
         <div ref={ytContainerRef} id="yt-player-container" />
       </div>
 
-      {/* Learn Mode overlay */}
       {learnMode && <LearnOS onClose={() => setLearnMode(false)} />}
 
       {/* Mini now-playing pill */}
@@ -229,12 +188,10 @@ function App() {
           )}
           <div className="gp-bg-overlay" />
           <div className="gp-glow-line" />
-
           {playerState.currentTrack.thumb
             ? <img src={playerState.currentTrack.thumb} alt="" className="gp-thumb" />
             : <div className="gp-thumb gp-thumb--audio">♪</div>
           }
-
           <div className="gp-info">
             <div className="gp-marquee-wrap">
               <span className={`gp-title ${playerState.currentTrack.title?.length > 22 ? 'gp-title--scroll' : ''}`}>
@@ -249,7 +206,6 @@ function App() {
               <span className="gp-artist">{playerState.currentTrack.artist}</span>
             </div>
           </div>
-
           {playerState.playing && (
             <div className="gp-eq">
               {[1,2,3,4].map(i => (
@@ -257,11 +213,7 @@ function App() {
               ))}
             </div>
           )}
-
-          <button
-            className="gp-play"
-            onClick={e => { e.stopPropagation(); handlePlayerChange({ playing: !playerState.playing }); }}
-          >
+          <button className="gp-play" onClick={e => { e.stopPropagation(); handlePlayerChange({ playing: !playerState.playing }); }}>
             <div className="gp-play-ring" />
             <span className="gp-play-icon">{playerState.playing ? '⏸' : '▶'}</span>
           </button>
@@ -270,9 +222,13 @@ function App() {
 
       <div className="app-content">
         {view === 'dashboard' && <Dashboard key={refreshKey} onNavigate={setView} />}
-        {view === 'log' && <HabitLog onDone={handleLogDone} />}
-        {view === 'stats' && <Stats />}
-        {view === 'coach' && <AICoach />}
+        {view === 'log'       && <HabitLog onDone={handleLogDone} />}
+        {view === 'stats'     && <Stats />}
+        {view === 'coach'     && <AICoach />}
+        {view === 'mood'      && <MoodLog onDone={handleFeatureDone} />}
+        {view === 'journal'   && <Journal onDone={handleFeatureDone} />}
+        {view === 'focus'     && <FocusTimer onNavigate={setView} />}
+        {view === 'goals'     && <Goals />}
 
         <div style={{ display: view === 'music' ? 'block' : 'none' }}>
           <Music
@@ -283,13 +239,15 @@ function App() {
         </div>
       </div>
 
-      <NavBar
-        active={view}
-        onNavigate={setView}
-        playerState={playerState}
-        learnMode={learnMode}
-        onLearnToggle={() => setLearnMode(prev => !prev)}
-      />
+      {!hideNav && (
+        <NavBar
+          active={view}
+          onNavigate={setView}
+          playerState={playerState}
+          learnMode={learnMode}
+          onLearnToggle={() => setLearnMode(prev => !prev)}
+        />
+      )}
     </div>
   );
 }
