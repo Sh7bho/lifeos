@@ -1,14 +1,6 @@
-import { useState, useEffect } from "react";
-
-const HABITS = [
-  { id: 1, icon: "💪", label: "Gym", streak: 2, color: "#E8C547", done: false },
-  { id: 2, icon: "💻", label: "Coding", streak: 0, color: "#5B8DEF", done: false },
-  { id: 3, icon: "📈", label: "Business", streak: 0, color: "#EF8C5B", done: false },
-  { id: 4, icon: "📚", label: "Learning", streak: 2, color: "#5BEF8C", done: false },
-  { id: 5, icon: "🎓", label: "BCA", streak: 0, color: "#C45BEF", done: false },
-];
-
-const BRIEFING = "You're 2 days into your gym streak. Coding and Business haven't been touched — today's the day to change that. Finish what you started this week.";
+import React, { useState, useEffect, useCallback } from 'react';
+import { HABITS, getTodayLogs, getStreaks, getTodayBriefing, saveAIBriefing } from '../lib/supabase';
+import { generateDailyBriefing } from '../lib/groq';
 
 function useTime() {
   const [time, setTime] = useState(new Date());
@@ -20,31 +12,67 @@ function useTime() {
 }
 
 function getGreeting(h) {
-  if (h < 5) return "Still up?";
-  if (h < 12) return "Good morning";
-  if (h < 17) return "Good afternoon";
-  if (h < 21) return "Good evening";
-  return "Late night grind";
+  if (h < 5) return 'Still up?';
+  if (h < 12) return 'Good morning';
+  if (h < 17) return 'Good afternoon';
+  if (h < 21) return 'Good evening';
+  return 'Late night grind';
 }
 
-export default function Dashboard() {
+export default function Dashboard({ onNavigate }) {
   const time = useTime();
-  const [habits, setHabits] = useState(HABITS);
-  const [expanded, setExpanded] = useState(null);
+  const [todayLogs, setTodayLogs] = useState([]);
+  const [streaks, setStreaks] = useState({});
+  const [briefing, setBriefing] = useState('');
   const [briefingOpen, setBriefingOpen] = useState(false);
+  const [loadingBriefing, setLoadingBriefing] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  const done = habits.filter(h => h.done).length;
-  const total = habits.length;
+  const loadData = useCallback(async () => {
+    try {
+      const [logs, streakData, savedBriefing] = await Promise.all([
+        getTodayLogs(),
+        getStreaks(),
+        getTodayBriefing(),
+      ]);
+      setTodayLogs(logs);
+      setStreaks(streakData);
+      if (savedBriefing?.content) {
+        setBriefing(savedBriefing.content);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadData(); }, [loadData]);
+
+  async function handleGenerateBriefing() {
+    if (briefing || loadingBriefing) { setBriefingOpen(o => !o); return; }
+    setLoadingBriefing(true);
+    setBriefingOpen(true);
+    try {
+      const text = await generateDailyBriefing({ streaks, todayLogs });
+      setBriefing(text);
+      await saveAIBriefing(text);
+    } catch (e) {
+      setBriefing('Could not generate briefing right now.');
+    } finally {
+      setLoadingBriefing(false);
+    }
+  }
+
+  const loggedIds = new Set(todayLogs.map(l => l.habit_id));
+  const done = HABITS.filter(h => loggedIds.has(h.id)).length;
+  const total = HABITS.length;
   const pct = Math.round((done / total) * 100);
 
   const h = time.getHours();
   const greeting = getGreeting(h);
-  const dayStr = time.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
-  const timeStr = time.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
-
-  function toggleHabit(id) {
-    setHabits(prev => prev.map(h => h.id === id ? { ...h, done: !h.done } : h));
-  }
+  const dayStr = time.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+  const timeStr = time.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 
   const circumference = 2 * Math.PI * 26;
   const offset = circumference - (pct / 100) * circumference;
@@ -52,142 +80,139 @@ export default function Dashboard() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=DM+Mono:wght@300;400&family=Syne:wght@400;500;600;700;800&display=swap');
-
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-
-        body, #root {
-          background: #0c0c0c;
-          min-height: 100vh;
-          font-family: 'Syne', sans-serif;
-        }
+        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500&family=DM+Mono:wght@300;400&family=Syne:wght@600;700;800&display=swap');
 
         .dash {
-          max-width: 480px;
-          margin: 0 auto;
+          width: 100%;
           min-height: 100vh;
           background: #0c0c0c;
           color: #e8e3da;
-          padding: 0 0 100px;
+          padding: 0 0 110px;
           position: relative;
-          overflow: hidden;
+          font-family: 'Syne', sans-serif;
+          display: grid;
+          grid-template-columns: 320px 1fr;
+          grid-template-rows: auto;
+          align-items: start;
         }
 
-        /* Ambient glow */
-        .dash::before {
-          content: '';
+        .dash-glow {
           position: fixed;
-          top: -180px;
-          left: 50%;
-          transform: translateX(-50%);
+          top: -200px;
+          left: 0;
           width: 600px;
-          height: 400px;
-          background: radial-gradient(ellipse, rgba(200,165,90,0.07) 0%, transparent 70%);
+          height: 500px;
+          background: radial-gradient(ellipse, rgba(200,169,90,0.05) 0%, transparent 70%);
           pointer-events: none;
           z-index: 0;
         }
 
-        /* ── HEADER ── */
-        .header {
-          padding: 48px 28px 0;
-          position: relative;
-          z-index: 1;
+        /* LEFT COLUMN */
+        .d-left {
+          grid-column: 1;
+          grid-row: 1 / 99;
+          padding: 52px 36px 40px;
+          border-right: 1px solid #141414;
+          min-height: 100vh;
+          display: flex;
+          flex-direction: column;
+          gap: 0;
+          position: sticky;
+          top: 0;
+          height: 100vh;
+          overflow-y: auto;
         }
 
-        .header-meta {
+        /* RIGHT COLUMN */
+        .d-right {
+          grid-column: 2;
+          padding: 52px 48px 40px;
+          display: flex;
+          flex-direction: column;
+          gap: 0;
+        }
+
+        /* HEADER */
+        .d-header {
+          margin-bottom: 36px;
+          animation: fadeUp 0.5s 0.05s both;
+        }
+
+        .d-meta {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          margin-bottom: 20px;
+          margin-bottom: 24px;
         }
 
-        .date-chip {
+        .d-date {
           font-family: 'DM Mono', monospace;
           font-size: 11px;
           font-weight: 300;
           letter-spacing: 0.12em;
-          color: #666;
+          color: #444;
           text-transform: uppercase;
         }
 
-        .time-display {
+        .d-time {
           font-family: 'DM Mono', monospace;
           font-size: 13px;
-          font-weight: 400;
           color: #C8A95A;
           letter-spacing: 0.05em;
         }
 
-        .greeting {
+        .d-greeting {
           font-family: 'Cormorant Garamond', serif;
           font-size: 13px;
-          font-weight: 400;
-          color: #555;
-          letter-spacing: 0.08em;
+          color: #3a3a3a;
+          letter-spacing: 0.1em;
           text-transform: uppercase;
-          margin-bottom: 6px;
+          margin-bottom: 4px;
         }
 
-        .headline {
-          font-family: 'Syne', sans-serif;
-          font-size: 34px;
+        .d-name {
+          font-size: 44px;
           font-weight: 800;
           color: #e8e3da;
-          line-height: 1.05;
-          letter-spacing: -0.02em;
+          line-height: 1;
+          letter-spacing: -0.03em;
         }
 
-        .headline span {
-          color: #C8A95A;
-        }
+        .d-name span { color: #C8A95A; }
 
-        /* ── MISSION RING ── */
-        .mission-block {
-          margin: 32px 28px 0;
-          background: #131313;
-          border: 1px solid #1e1e1e;
+        /* MISSION */
+        .d-mission {
+          background: #111;
+          border: 1px solid #1c1c1c;
           border-radius: 16px;
-          padding: 24px;
+          padding: 20px;
           display: flex;
           align-items: center;
-          gap: 24px;
+          gap: 18px;
           position: relative;
           overflow: hidden;
-          cursor: pointer;
-          transition: border-color 0.2s;
+          margin-bottom: 12px;
+          animation: fadeUp 0.5s 0.12s both;
         }
 
-        .mission-block:hover {
-          border-color: #2a2a2a;
-        }
-
-        .mission-block::after {
+        .d-mission::after {
           content: '';
           position: absolute;
           inset: 0;
-          background: linear-gradient(135deg, rgba(200,169,90,0.03) 0%, transparent 60%);
+          background: linear-gradient(135deg, rgba(200,169,90,0.04) 0%, transparent 60%);
           pointer-events: none;
         }
 
-        .ring-wrap {
-          position: relative;
-          flex-shrink: 0;
-        }
-
-        .ring-wrap svg {
-          transform: rotate(-90deg);
-        }
-
+        .d-ring { position: relative; flex-shrink: 0; }
+        .d-ring svg { transform: rotate(-90deg); display: block; }
         .ring-track { fill: none; stroke: #1e1e1e; stroke-width: 3; }
         .ring-fill {
           fill: none;
-          stroke: #C8A95A;
           stroke-width: 3;
           stroke-linecap: round;
-          transition: stroke-dashoffset 0.6s cubic-bezier(0.4,0,0.2,1);
+          transition: stroke-dashoffset 0.7s cubic-bezier(0.4,0,0.2,1), stroke 0.4s;
         }
-
-        .ring-label {
+        .ring-num {
           position: absolute;
           inset: 0;
           display: flex;
@@ -195,93 +220,142 @@ export default function Dashboard() {
           justify-content: center;
           font-family: 'DM Mono', monospace;
           font-size: 13px;
-          font-weight: 400;
           color: #C8A95A;
         }
 
-        .mission-text { flex: 1; }
+        .d-mission-text { flex: 1; }
 
-        .mission-eyebrow {
+        .d-eyebrow {
           font-family: 'DM Mono', monospace;
           font-size: 9px;
-          letter-spacing: 0.2em;
-          color: #444;
+          letter-spacing: 0.22em;
+          color: #333;
           text-transform: uppercase;
-          margin-bottom: 6px;
+          margin-bottom: 5px;
         }
 
-        .mission-title {
+        .d-mission-title {
           font-size: 17px;
           font-weight: 700;
           color: #e8e3da;
           line-height: 1.2;
-          margin-bottom: 4px;
+          margin-bottom: 2px;
         }
 
-        .mission-sub {
+        .d-mission-sub {
           font-family: 'DM Mono', monospace;
           font-size: 11px;
-          color: #444;
+          color: #333;
           font-weight: 300;
         }
 
-        .log-btn {
-          margin-top: 14px;
+        .d-log-btn {
+          display: block;
           width: 100%;
           padding: 13px;
           background: #C8A95A;
           color: #0c0c0c;
           border: none;
-          border-radius: 10px;
+          border-radius: 11px;
           font-family: 'Syne', sans-serif;
-          font-size: 13px;
+          font-size: 12px;
           font-weight: 700;
-          letter-spacing: 0.08em;
+          letter-spacing: 0.12em;
           text-transform: uppercase;
           cursor: pointer;
           transition: opacity 0.15s, transform 0.1s;
+          margin-bottom: 12px;
+          animation: fadeUp 0.5s 0.15s both;
         }
 
-        .log-btn:hover { opacity: 0.9; }
-        .log-btn:active { transform: scale(0.98); }
+        .d-log-btn:hover { opacity: 0.88; }
+        .d-log-btn:active { transform: scale(0.98); }
 
-        /* ── SECTION LABEL ── */
-        .section-label {
-          padding: 28px 28px 12px;
+        .d-all-done {
+          text-align: center;
+          padding: 10px 0 12px;
+          font-family: 'Cormorant Garamond', serif;
+          font-size: 18px;
+          font-weight: 300;
+          color: #C8A95A;
+          letter-spacing: 0.03em;
+          animation: fadeUp 0.4s both;
+        }
+
+        /* QUICK STATS in left col */
+        .d-stats {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 8px;
+          margin-top: auto;
+          padding-top: 24px;
+          animation: fadeUp 0.5s 0.26s both;
+        }
+
+        .d-stat {
+          background: #0f0f0f;
+          border: 1px solid #171717;
+          border-radius: 12px;
+          padding: 16px;
+          transition: border-color 0.2s;
+        }
+
+        .d-stat:hover { border-color: #202020; }
+
+        .d-stat-val {
+          font-family: 'Cormorant Garamond', serif;
+          font-size: 34px;
+          font-weight: 500;
+          color: #e8e3da;
+          line-height: 1;
+          margin-bottom: 4px;
+        }
+
+        .d-stat-val span {
+          font-size: 14px;
+          font-weight: 300;
+          color: #2e2e2e;
+        }
+
+        .d-stat-label {
           font-family: 'DM Mono', monospace;
           font-size: 9px;
-          letter-spacing: 0.25em;
-          color: #333;
+          letter-spacing: 0.18em;
+          color: #2a2a2a;
           text-transform: uppercase;
         }
 
-        /* ── HABITS ── */
-        .habits-list {
-          padding: 0 28px;
+        /* SECTION LABEL */
+        .d-section {
+          font-family: 'DM Mono', monospace;
+          font-size: 9px;
+          letter-spacing: 0.25em;
+          color: #2a2a2a;
+          text-transform: uppercase;
+          margin-bottom: 12px;
+        }
+
+        /* HABITS in right col */
+        .d-habits {
           display: flex;
           flex-direction: column;
           gap: 2px;
+          margin-bottom: 40px;
+          animation: fadeUp 0.5s 0.19s both;
         }
 
-        .habit-row {
+        .d-habit {
           display: flex;
           align-items: center;
-          gap: 14px;
-          padding: 16px 18px;
-          border-radius: 12px;
-          cursor: pointer;
-          transition: background 0.15s;
+          gap: 16px;
+          padding: 16px 14px;
+          border-radius: 14px;
+          cursor: default;
           position: relative;
-          overflow: hidden;
+          transition: background 0.15s;
         }
 
-        .habit-row:hover { background: #131313; }
-
-        .habit-row.done-row {
-          opacity: 0.45;
-        }
-
-        .habit-row::before {
+        .d-habit::before {
           content: '';
           position: absolute;
           left: 0;
@@ -291,102 +365,93 @@ export default function Dashboard() {
           height: 0;
           border-radius: 1px;
           transition: height 0.3s cubic-bezier(0.4,0,0.2,1);
+          background: var(--hc);
         }
 
-        .habit-row:hover::before,
-        .habit-row.done-row::before {
-          height: 60%;
-        }
+        .d-habit:hover { background: #111; }
+        .d-habit:hover::before { height: 55%; }
+        .d-habit.logged { opacity: 0.35; }
 
-        .habit-icon {
+        .d-habit-icon {
           font-size: 20px;
-          width: 36px;
-          height: 36px;
+          width: 42px;
+          height: 42px;
           display: flex;
           align-items: center;
           justify-content: center;
-          border-radius: 10px;
-          background: #131313;
+          border-radius: 12px;
+          background: #111;
           border: 1px solid #1c1c1c;
           flex-shrink: 0;
-          transition: border-color 0.2s;
         }
 
-        .habit-row:hover .habit-icon {
-          border-color: #2a2a2a;
-        }
+        .d-habit-info { flex: 1; }
 
-        .habit-info { flex: 1; }
-
-        .habit-name {
-          font-size: 15px;
+        .d-habit-name {
+          font-size: 16px;
           font-weight: 600;
           color: #d8d3ca;
           letter-spacing: -0.01em;
         }
 
-        .habit-streak {
+        .d-habit-streak {
           font-family: 'DM Mono', monospace;
-          font-size: 10px;
+          font-size: 11px;
           font-weight: 300;
-          margin-top: 2px;
+          margin-top: 3px;
         }
 
-        .habit-right {
+        .d-habit-right {
           display: flex;
           align-items: center;
-          gap: 10px;
+          gap: 12px;
         }
 
-        .streak-badge {
+        .d-streak-num {
           font-family: 'DM Mono', monospace;
-          font-size: 12px;
-          font-weight: 400;
+          font-size: 13px;
           min-width: 28px;
           text-align: right;
         }
 
-        .check-circle {
-          width: 22px;
-          height: 22px;
+        .d-check {
+          width: 24px;
+          height: 24px;
           border-radius: 50%;
-          border: 1.5px solid #2a2a2a;
+          border: 1.5px solid #1e1e1e;
           display: flex;
           align-items: center;
           justify-content: center;
-          transition: all 0.2s;
           flex-shrink: 0;
+          transition: all 0.2s;
         }
 
-        .check-circle.checked {
-          border-color: transparent;
+        .d-check.checked {
+          background: color-mix(in srgb, var(--hc) 15%, transparent);
+          border-color: color-mix(in srgb, var(--hc) 50%, transparent);
         }
 
-        .check-circle svg {
-          opacity: 0;
-          transition: opacity 0.2s;
-        }
+        .d-check svg { opacity: 0; transition: opacity 0.2s; }
+        .d-check.checked svg { opacity: 1; }
 
-        .check-circle.checked svg { opacity: 1; }
-
-        /* ── DIVIDER ── */
-        .divider {
-          margin: 24px 28px;
+        /* DIVIDER */
+        .d-divider {
           height: 1px;
-          background: linear-gradient(90deg, transparent, #1e1e1e 30%, #1e1e1e 70%, transparent);
+          background: linear-gradient(90deg, transparent, #161616 30%, #161616 70%, transparent);
+          margin-bottom: 32px;
         }
 
-        /* ── BRIEFING ── */
-        .briefing-block {
-          margin: 0 28px;
-          border: 1px solid #1a1a1a;
+        /* BRIEFING in right col */
+        .d-briefing {
+          border: 1px solid #161616;
           border-radius: 16px;
           overflow: hidden;
-          background: #111;
+          background: #0e0e0e;
+          animation: fadeUp 0.5s 0.33s both;
         }
 
-        .briefing-header {
-          padding: 16px 20px;
+        .d-briefing-head {
+          padding: 18px 22px;
           display: flex;
           align-items: center;
           justify-content: space-between;
@@ -394,263 +459,239 @@ export default function Dashboard() {
           transition: background 0.15s;
         }
 
-        .briefing-header:hover { background: #141414; }
+        .d-briefing-head:hover { background: #111; }
 
-        .briefing-label {
+        .d-briefing-left {
           display: flex;
           align-items: center;
-          gap: 10px;
+          gap: 12px;
         }
 
-        .aria-dot {
-          width: 6px;
-          height: 6px;
+        .d-aria-dot {
+          width: 7px;
+          height: 7px;
           border-radius: 50%;
           background: #C8A95A;
-          box-shadow: 0 0 8px rgba(200,169,90,0.6);
-          animation: pulse 2s ease-in-out infinite;
+          box-shadow: 0 0 10px rgba(200,169,90,0.5);
+          animation: ariaPulse 2s ease-in-out infinite;
         }
 
-        @keyframes pulse {
+        @keyframes ariaPulse {
           0%, 100% { opacity: 1; transform: scale(1); }
-          50% { opacity: 0.5; transform: scale(0.8); }
+          50% { opacity: 0.4; transform: scale(0.7); }
         }
 
-        .briefing-title {
+        .d-briefing-lbl {
           font-family: 'DM Mono', monospace;
           font-size: 10px;
           letter-spacing: 0.2em;
-          color: #555;
+          color: #3a3a3a;
           text-transform: uppercase;
         }
 
-        .briefing-toggle {
+        .d-briefing-action {
           font-family: 'DM Mono', monospace;
           font-size: 11px;
-          color: #333;
+          color: #2e2e2e;
           transition: color 0.2s;
         }
 
-        .briefing-header:hover .briefing-toggle { color: #555; }
+        .d-briefing-head:hover .d-briefing-action { color: #555; }
 
-        .briefing-body {
-          padding: 0 20px;
+        .d-briefing-body {
           max-height: 0;
           overflow: hidden;
-          transition: max-height 0.4s cubic-bezier(0.4,0,0.2,1), padding 0.3s;
+          transition: max-height 0.4s cubic-bezier(0.4,0,0.2,1);
         }
 
-        .briefing-body.open {
-          max-height: 200px;
-          padding-bottom: 20px;
+        .d-briefing-body.open { max-height: 400px; }
+
+        .d-briefing-inner {
+          padding: 0 22px 24px;
+          border-top: 1px solid #161616;
         }
 
-        .briefing-text {
-          font-family: 'Cormorant Garamond', serif;
-          font-size: 18px;
-          font-weight: 300;
-          color: #888;
-          line-height: 1.6;
-          letter-spacing: 0.01em;
-          border-top: 1px solid #1a1a1a;
-          padding-top: 16px;
-        }
-
-        /* ── QUICK STATS ── */
-        .quick-stats {
-          margin: 0 28px;
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 8px;
-        }
-
-        .stat-card {
-          background: #111;
-          border: 1px solid #1a1a1a;
-          border-radius: 14px;
-          padding: 18px;
-          transition: border-color 0.2s;
-        }
-
-        .stat-card:hover { border-color: #252525; }
-
-        .stat-value {
-          font-family: 'Cormorant Garamond', serif;
-          font-size: 36px;
-          font-weight: 500;
-          color: #e8e3da;
-          line-height: 1;
-          margin-bottom: 4px;
-        }
-
-        .stat-value span {
-          font-size: 16px;
-          font-weight: 300;
-          color: #444;
-        }
-
-        .stat-label {
-          font-family: 'DM Mono', monospace;
-          font-size: 9px;
-          letter-spacing: 0.18em;
-          color: #333;
-          text-transform: uppercase;
-        }
-
-        /* ── COMPLETED STATE ── */
-        .all-done {
-          text-align: center;
-          padding: 20px 28px 0;
-        }
-
-        .all-done-text {
+        .d-briefing-text {
           font-family: 'Cormorant Garamond', serif;
           font-size: 22px;
           font-weight: 300;
-          color: #C8A95A;
-          letter-spacing: 0.03em;
+          color: #666;
+          line-height: 1.65;
+          letter-spacing: 0.01em;
+          padding-top: 18px;
         }
 
-        /* ── FADE IN ── */
+        .d-briefing-loading {
+          font-family: 'DM Mono', monospace;
+          font-size: 11px;
+          color: #333;
+          padding-top: 18px;
+          letter-spacing: 0.1em;
+          animation: ariaPulse 1.5s ease-in-out infinite;
+        }
+
+        /* SKELETON */
+        .d-skeleton {
+          background: linear-gradient(90deg, #111 25%, #181818 50%, #111 75%);
+          background-size: 200% 100%;
+          animation: shimmer 1.5s infinite;
+          border-radius: 8px;
+          height: 16px;
+          margin-bottom: 8px;
+        }
+
+        @keyframes shimmer {
+          0% { background-position: 200% 0; }
+          100% { background-position: -200% 0; }
+        }
+
         @keyframes fadeUp {
-          from { opacity: 0; transform: translateY(12px); }
+          from { opacity: 0; transform: translateY(10px); }
           to { opacity: 1; transform: translateY(0); }
         }
-
-        .fade-1 { animation: fadeUp 0.5s 0.05s both; }
-        .fade-2 { animation: fadeUp 0.5s 0.12s both; }
-        .fade-3 { animation: fadeUp 0.5s 0.19s both; }
-        .fade-4 { animation: fadeUp 0.5s 0.26s both; }
-        .fade-5 { animation: fadeUp 0.5s 0.33s both; }
-        .fade-6 { animation: fadeUp 0.5s 0.40s both; }
       `}</style>
 
       <div className="dash">
+        <div className="dash-glow" />
 
-        {/* HEADER */}
-        <div className="header fade-1">
-          <div className="header-meta">
-            <span className="date-chip">{dayStr}</span>
-            <span className="time-display">{timeStr}</span>
-          </div>
-          <div className="greeting">{greeting},</div>
-          <div className="headline">Shubho<span>.</span></div>
-        </div>
+        {/* ── LEFT COLUMN ── */}
+        <div className="d-left">
 
-        {/* MISSION */}
-        <div className="mission-block fade-2">
-          <div className="ring-wrap">
-            <svg width="64" height="64" viewBox="0 0 64 64">
-              <circle className="ring-track" cx="32" cy="32" r="26" />
-              <circle
-                className="ring-fill"
-                cx="32" cy="32" r="26"
-                strokeDasharray={circumference}
-                strokeDashoffset={offset}
-                style={{ stroke: pct === 100 ? '#5BEF8C' : '#C8A95A' }}
-              />
-            </svg>
-            <div className="ring-label">{pct}%</div>
-          </div>
-          <div className="mission-text">
-            <div className="mission-eyebrow">Today's mission</div>
-            <div className="mission-title">
-              {done === total
-                ? "All locked in."
-                : `${total - done} habit${total - done > 1 ? 's' : ''} remaining`}
+          {/* HEADER */}
+          <div className="d-header">
+            <div className="d-meta">
+              <span className="d-date">{dayStr}</span>
+              <span className="d-time">{timeStr}</span>
             </div>
-            <div className="mission-sub">{done}/{total} complete</div>
+            <div className="d-greeting">{greeting},</div>
+            <div className="d-name">Shubho<span>.</span></div>
           </div>
-        </div>
 
-        {done < total && (
-          <div style={{ padding: '10px 28px 0' }} className="fade-2">
-            <button className="log-btn" onClick={() => {}}>
+          {/* MISSION RING */}
+          <div className="d-mission">
+            <div className="d-ring">
+              <svg width="64" height="64" viewBox="0 0 64 64">
+                <circle className="ring-track" cx="32" cy="32" r="26" />
+                <circle
+                  className="ring-fill"
+                  cx="32" cy="32" r="26"
+                  strokeDasharray={circumference}
+                  strokeDashoffset={loading ? circumference : offset}
+                  stroke={pct === 100 ? '#5BEF8C' : '#C8A95A'}
+                />
+              </svg>
+              <div className="ring-num">{pct}%</div>
+            </div>
+            <div className="d-mission-text">
+              <div className="d-eyebrow">Today's mission</div>
+              <div className="d-mission-title">
+                {loading ? '—'
+                  : done === total ? 'All locked in.'
+                  : `${total - done} habit${total - done > 1 ? 's' : ''} remaining`}
+              </div>
+              <div className="d-mission-sub">{done}/{total} complete</div>
+            </div>
+          </div>
+
+          {!loading && done < total && (
+            <button className="d-log-btn" onClick={() => onNavigate('log')}>
               Log habits →
             </button>
-          </div>
-        )}
+          )}
 
-        {done === total && (
-          <div className="all-done fade-2">
-            <div className="all-done-text">All done. Locked in. 🔒</div>
-          </div>
-        )}
+          {!loading && done === total && (
+            <div className="d-all-done">All done. Locked in. 🔒</div>
+          )}
 
-        {/* STREAKS */}
-        <div className="section-label fade-3">Streaks</div>
-        <div className="habits-list fade-3">
-          {habits.map((habit, i) => (
-            <div
-              key={habit.id}
-              className={`habit-row${habit.done ? ' done-row' : ''}`}
-              style={{ '--accent': habit.color }}
-              onClick={() => toggleHabit(habit.id)}
-            >
-              <style>{`
-                .habit-row[style*="--accent: ${habit.color}"]::before { background: ${habit.color}; }
-                .habit-row[style*="--accent: ${habit.color}"] .check-circle.checked { background: ${habit.color}20; border-color: ${habit.color}60; }
-                .habit-row[style*="--accent: ${habit.color}"] .streak-badge { color: ${habit.streak > 0 ? habit.color : '#2e2e2e'}; }
-                .habit-row[style*="--accent: ${habit.color}"] .habit-streak { color: ${habit.streak > 0 ? habit.color + '80' : '#2a2a2a'}; }
-              `}</style>
-              <div className="habit-icon">{habit.icon}</div>
-              <div className="habit-info">
-                <div className="habit-name">{habit.label}</div>
-                <div className="habit-streak">
-                  {habit.streak > 0 ? `${habit.streak} day streak` : 'Start today'}
-                </div>
+          {/* QUICK STATS */}
+          <div className="d-stats">
+            <div className="d-stat">
+              <div className="d-stat-val">
+                {Object.values(streaks).filter(s => s > 0).length}
+                <span> active</span>
               </div>
-              <div className="habit-right">
-                <div className="streak-badge">
-                  {habit.streak > 0 ? `${habit.streak}d` : '—'}
-                </div>
-                <div className={`check-circle${habit.done ? ' checked' : ''}`}
-                  style={habit.done ? { borderColor: habit.color + '60', background: habit.color + '15' } : {}}>
-                  <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-                    <path d="M1 4L3.5 6.5L9 1" stroke={habit.color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                </div>
+              <div className="d-stat-label">Streaks running</div>
+            </div>
+            <div className="d-stat">
+              <div className="d-stat-val">
+                {Math.max(0, ...Object.values(streaks))}
+                <span>d</span>
+              </div>
+              <div className="d-stat-label">Best streak</div>
+            </div>
+          </div>
+
+        </div>
+
+        {/* ── RIGHT COLUMN ── */}
+        <div className="d-right">
+
+          {/* STREAKS */}
+          <div className="d-section">Streaks</div>
+          <div className="d-habits">
+            {loading
+              ? [1,2,3,4,5].map(i => (
+                  <div key={i} style={{ padding: '16px 14px' }}>
+                    <div className="d-skeleton" style={{ width: `${55 + i * 9}%` }} />
+                  </div>
+                ))
+              : HABITS.map(habit => {
+                  const streak = streaks[habit.id] || 0;
+                  const logged = loggedIds.has(habit.id);
+                  return (
+                    <div
+                      key={habit.id}
+                      className={`d-habit${logged ? ' logged' : ''}`}
+                      style={{ '--hc': streak > 0 ? habit.color : '#2a2a2a' }}
+                    >
+                      <div className="d-habit-icon">{habit.icon}</div>
+                      <div className="d-habit-info">
+                        <div className="d-habit-name">{habit.label}</div>
+                        <div className="d-habit-streak" style={{ color: streak > 0 ? habit.color : '#2a2a2a' }}>
+                          {streak > 0 ? `${streak} day streak` : 'Start today'}
+                        </div>
+                      </div>
+                      <div className="d-habit-right">
+                        <div className="d-streak-num" style={{ color: streak > 0 ? habit.color : '#2a2a2a' }}>
+                          {streak > 0 ? `${streak}d` : '—'}
+                        </div>
+                        <div className={`d-check${logged ? ' checked' : ''}`} style={{ '--hc': habit.color }}>
+                          <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                            <path d="M1 4L3.5 6.5L9 1" stroke={habit.color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+            }
+          </div>
+
+          <div className="d-divider" />
+
+          {/* BRIEFING */}
+          <div className="d-section">Aria — Daily Briefing</div>
+          <div className="d-briefing">
+            <div className="d-briefing-head" onClick={handleGenerateBriefing}>
+              <div className="d-briefing-left">
+                <div className="d-aria-dot" />
+                <span className="d-briefing-lbl">Today's briefing</span>
+              </div>
+              <span className="d-briefing-action">
+                {briefingOpen ? '↑ close' : briefing ? '↓ read' : '↓ generate'}
+              </span>
+            </div>
+            <div className={`d-briefing-body${briefingOpen ? ' open' : ''}`}>
+              <div className="d-briefing-inner">
+                {loadingBriefing
+                  ? <div className="d-briefing-loading">Aria is thinking...</div>
+                  : <div className="d-briefing-text">{briefing}</div>
+                }
               </div>
             </div>
-          ))}
+          </div>
+
         </div>
-
-        <div className="divider fade-4" />
-
-        {/* QUICK STATS */}
-        <div className="quick-stats fade-4">
-          <div className="stat-card">
-            <div className="stat-value">
-              {habits.filter(h => h.streak > 0).length}
-              <span> active</span>
-            </div>
-            <div className="stat-label">Streaks running</div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-value">
-              {Math.max(...habits.map(h => h.streak))}
-              <span>d</span>
-            </div>
-            <div className="stat-label">Best streak</div>
-          </div>
-        </div>
-
-        <div className="section-label fade-5" style={{ marginTop: 20 }}>Aria — Daily Briefing</div>
-
-        {/* BRIEFING */}
-        <div className="briefing-block fade-5">
-          <div className="briefing-header" onClick={() => setBriefingOpen(o => !o)}>
-            <div className="briefing-label">
-              <div className="aria-dot" />
-              <span className="briefing-title">Today's briefing</span>
-            </div>
-            <span className="briefing-toggle">{briefingOpen ? '↑ close' : '↓ read'}</span>
-          </div>
-          <div className={`briefing-body${briefingOpen ? ' open' : ''}`}>
-            <div className="briefing-text">{BRIEFING}</div>
-          </div>
-        </div>
-
       </div>
     </>
   );
