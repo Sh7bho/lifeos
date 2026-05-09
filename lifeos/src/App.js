@@ -21,7 +21,6 @@ function App() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [learnMode, setLearnMode] = useState(false);
   const [playerState, setPlayerState] = useState({ currentTrack: null, playing: false });
-
   const audioRef = useRef(null);
   const keepaliveRef = useRef(null);
   const ytPlayerRef = useRef(null);
@@ -30,7 +29,6 @@ function App() {
   const ytPendingRef = useRef(null);
 
   // ── YouTube IFrame API ──────────────────────────────────────────────────────
-
   useEffect(() => {
     if (window.YT && window.YT.Player) { ytApiReady.current = true; return; }
     const tag = document.createElement('script');
@@ -65,7 +63,6 @@ function App() {
   }
 
   // ── Track / play / volume sync ──────────────────────────────────────────────
-
   useEffect(() => {
     const track = playerState.currentTrack;
     const el = audioRef.current;
@@ -98,13 +95,11 @@ function App() {
   }, [playerState.volume]);
 
   // ── iOS keepalive ───────────────────────────────────────────────────────────
-
   function startKeepalive() {
     const el = keepaliveRef.current;
     if (!el || !el.paused) return;
     el.play().catch(() => {});
   }
-
   function stopKeepalive() {
     const el = keepaliveRef.current;
     if (!el || el.paused) return;
@@ -112,7 +107,6 @@ function App() {
   }
 
   // ── Media Session API ───────────────────────────────────────────────────────
-
   useEffect(() => {
     if (!('mediaSession' in navigator)) return;
     const track = playerState.currentTrack;
@@ -138,7 +132,6 @@ function App() {
   }, [playerState.currentTrack, playerState.playing]);
 
   // ── Handlers ────────────────────────────────────────────────────────────────
-
   function handlePlayerChange(changes) {
     setPlayerState(prev => ({ ...prev, ...changes }));
     if (changes._ytRepeat && ytPlayerRef.current?.seekTo) {
@@ -152,24 +145,13 @@ function App() {
     setView('dashboard');
   }
 
-  // Views that go back to dashboard on done
-  function handleFeatureDone() {
-    setView('dashboard');
-  }
-
   if (isSetup) return <Setup />;
-
-  // Views that hide the navbar
-  const FULL_VIEWS = ['mood', 'journal', 'focus', 'goals'];
-  const hideNav = FULL_VIEWS.includes(view);
 
   return (
     <div className="app">
       <div className="noise-overlay" />
-
       <audio ref={audioRef} style={{ display: 'none' }} />
       <audio ref={keepaliveRef} src={SILENT_WAV} loop style={{ display: 'none' }} />
-
       <div style={{ position: 'fixed', width: 1, height: 1, overflow: 'hidden', opacity: 0, top: -999, left: -999, pointerEvents: 'none' }}>
         <div ref={ytContainerRef} id="yt-player-container" />
       </div>
@@ -222,32 +204,30 @@ function App() {
 
       <div className="app-content">
         {view === 'dashboard' && <Dashboard key={refreshKey} onNavigate={setView} />}
-        {view === 'log'       && <HabitLog onDone={handleLogDone} />}
-        {view === 'stats'     && <Stats />}
-        {view === 'coach'     && <AICoach />}
-        {view === 'mood'      && <MoodLog onDone={handleFeatureDone} />}
-        {view === 'journal'   && <Journal onDone={handleFeatureDone} />}
+        {view === 'log'       && <HabitLog onDone={handleLogDone} onNavigate={setView} />}
+        {view === 'stats'     && <Stats onNavigate={setView} />}
+        {view === 'coach'     && <AICoach onNavigate={setView} />}
+        {view === 'mood'      && <MoodLog onDone={() => setView('dashboard')} onNavigate={setView} />}
+        {view === 'journal'   && <Journal onDone={() => setView('dashboard')} onNavigate={setView} />}
         {view === 'focus'     && <FocusTimer onNavigate={setView} />}
-        {view === 'goals'     && <Goals />}
-
+        {view === 'goals'     && <Goals onNavigate={setView} />}
         <div style={{ display: view === 'music' ? 'block' : 'none' }}>
           <Music
             playerState={playerState}
             onPlayerChange={handlePlayerChange}
             audioRef={audioRef}
+            onNavigate={setView}
           />
         </div>
       </div>
 
-      {!hideNav && (
-        <NavBar
-          active={view}
-          onNavigate={setView}
-          playerState={playerState}
-          learnMode={learnMode}
-          onLearnToggle={() => setLearnMode(prev => !prev)}
-        />
-      )}
+      {/* Navbar always visible — no more hideNav */}
+      <NavBar
+        active={view}
+        onNavigate={setView}
+        learnMode={learnMode}
+        onLearnToggle={() => setLearnMode(prev => !prev)}
+      />
     </div>
   );
 }
