@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import BackHeader from './BackHeader';
 
 // ── Supabase helpers ─────────────────────────────────────────────────────────
 
@@ -52,7 +53,7 @@ const PROMPTS = [
 
 // ── Component ────────────────────────────────────────────────────────────────
 
-export default function Journal({ onDone }) {
+export default function Journal({ onDone, onNavigate }) {
   const [content, setContent] = useState('');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -62,6 +63,8 @@ export default function Journal({ onDone }) {
   const [selectedEntry, setSelectedEntry] = useState(null);
   const [prompt] = useState(() => PROMPTS[new Date().getDay() % PROMPTS.length]);
   const [wordCount, setWordCount] = useState(0);
+
+  const goBack = () => (onNavigate ? onNavigate('dashboard') : onDone?.());
 
   useEffect(() => {
     async function load() {
@@ -98,7 +101,7 @@ export default function Journal({ onDone }) {
     try {
       await saveJournalEntry({ content });
       setSaved(true);
-      setTimeout(() => onDone?.(), 1000);
+      setTimeout(() => goBack(), 900);
     } catch (e) {
       console.error(e);
     } finally {
@@ -121,14 +124,20 @@ export default function Journal({ onDone }) {
           color: #e8e3da;
           font-family: 'Syne', sans-serif;
           display: grid;
-          grid-template-columns: 1fr 340px;
+          grid-template-columns: 1fr 300px;
+          padding-bottom: 80px; /* navbar clearance */
+        }
+
+        @media (max-width: 700px) {
+          .j-wrap { grid-template-columns: 1fr; }
+          .j-sidebar { display: none; }
         }
 
         /* LEFT — editor */
         .j-editor {
-          padding: 52px 56px 60px;
+          padding: 36px 48px 60px;
           border-right: 1px solid #141414;
-          min-height: 100vh;
+          min-height: calc(100vh - 60px);
           display: flex;
           flex-direction: column;
           animation: fadeUp 0.4s 0.05s both;
@@ -138,7 +147,7 @@ export default function Journal({ onDone }) {
           display: flex;
           justify-content: space-between;
           align-items: flex-start;
-          margin-bottom: 40px;
+          margin-bottom: 32px;
         }
 
         .j-date {
@@ -156,7 +165,6 @@ export default function Journal({ onDone }) {
           letter-spacing: 0.08em;
           transition: color 0.3s;
         }
-
         .j-wordcount.active { color: #C8A95A; }
 
         .j-prompt {
@@ -185,21 +193,17 @@ export default function Journal({ onDone }) {
           letter-spacing: 0.01em;
           resize: none;
           caret-color: #C8A95A;
-          min-height: 400px;
+          min-height: 360px;
         }
-
-        .j-textarea::placeholder {
-          color: #1e1e1e;
-          font-style: italic;
-        }
+        .j-textarea::placeholder { color: #1e1e1e; font-style: italic; }
 
         .j-footer {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          padding-top: 28px;
+          padding-top: 24px;
           border-top: 1px solid #141414;
-          margin-top: 28px;
+          margin-top: 24px;
         }
 
         .j-footer-meta {
@@ -221,7 +225,6 @@ export default function Journal({ onDone }) {
           cursor: pointer;
           transition: all 0.2s;
         }
-
         .j-save:not(:disabled) { background: #C8A95A; color: #0c0c0c; }
         .j-save:disabled { background: #111; color: #222; cursor: not-allowed; }
         .j-save.done { background: #5BEF8C; color: #0c0c0c; }
@@ -230,7 +233,7 @@ export default function Journal({ onDone }) {
 
         /* RIGHT — past entries */
         .j-sidebar {
-          padding: 52px 32px 60px;
+          padding: 36px 24px 60px;
           display: flex;
           flex-direction: column;
           animation: fadeUp 0.4s 0.15s both;
@@ -242,24 +245,18 @@ export default function Journal({ onDone }) {
           letter-spacing: 0.25em;
           color: #222;
           text-transform: uppercase;
-          margin-bottom: 24px;
+          margin-bottom: 20px;
         }
 
-        .j-entry-list {
-          display: flex;
-          flex-direction: column;
-          gap: 4px;
-          flex: 1;
-        }
+        .j-entry-list { display: flex; flex-direction: column; gap: 4px; flex: 1; }
 
         .j-entry-item {
-          padding: 14px 16px;
-          border-radius: 12px;
+          padding: 12px 14px;
+          border-radius: 10px;
           cursor: pointer;
           border: 1px solid transparent;
           transition: all 0.15s;
         }
-
         .j-entry-item:hover { background: #0f0f0f; border-color: #161616; }
         .j-entry-item.active { background: #0f0f0f; border-color: #1e1e1e; }
 
@@ -269,12 +266,12 @@ export default function Journal({ onDone }) {
           letter-spacing: 0.1em;
           color: #333;
           text-transform: uppercase;
-          margin-bottom: 6px;
+          margin-bottom: 5px;
         }
 
         .j-entry-preview {
           font-family: 'Cormorant Garamond', serif;
-          font-size: 15px;
+          font-size: 14px;
           font-weight: 300;
           color: #444;
           line-height: 1.5;
@@ -288,11 +285,11 @@ export default function Journal({ onDone }) {
           font-family: 'DM Mono', monospace;
           font-size: 9px;
           color: #222;
-          margin-top: 6px;
+          margin-top: 5px;
           letter-spacing: 0.08em;
         }
 
-        /* MODAL for reading past entry */
+        /* Modal */
         .j-modal-bg {
           position: fixed;
           inset: 0;
@@ -305,19 +302,17 @@ export default function Journal({ onDone }) {
           padding: 40px;
           animation: fadeUp 0.2s both;
         }
-
         .j-modal {
           background: #0f0f0f;
           border: 1px solid #1e1e1e;
           border-radius: 20px;
           padding: 40px 48px;
-          max-width: 640px;
+          max-width: 620px;
           width: 100%;
           max-height: 80vh;
           overflow-y: auto;
           position: relative;
         }
-
         .j-modal-date {
           font-family: 'DM Mono', monospace;
           font-size: 10px;
@@ -326,7 +321,6 @@ export default function Journal({ onDone }) {
           text-transform: uppercase;
           margin-bottom: 24px;
         }
-
         .j-modal-content {
           font-family: 'Cormorant Garamond', serif;
           font-size: 21px;
@@ -335,13 +329,10 @@ export default function Journal({ onDone }) {
           line-height: 1.8;
           white-space: pre-wrap;
         }
-
         .j-modal-close {
           position: absolute;
-          top: 20px;
-          right: 24px;
-          background: none;
-          border: none;
+          top: 20px; right: 24px;
+          background: none; border: none;
           color: #333;
           font-family: 'DM Mono', monospace;
           font-size: 11px;
@@ -349,7 +340,6 @@ export default function Journal({ onDone }) {
           letter-spacing: 0.1em;
           transition: color 0.2s;
         }
-
         .j-modal-close:hover { color: #888; }
 
         .j-empty {
@@ -364,9 +354,15 @@ export default function Journal({ onDone }) {
 
         @keyframes fadeUp {
           from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
+          to   { opacity: 1; transform: translateY(0); }
         }
       `}</style>
+
+      <BackHeader
+        title="Journal"
+        onBack={goBack}
+        accent="#EF8C5B"
+      />
 
       {selectedEntry && (
         <div className="j-modal-bg" onClick={() => setSelectedEntry(null)}>
@@ -377,16 +373,13 @@ export default function Journal({ onDone }) {
               })}
             </div>
             <div className="j-modal-content">{selectedEntry.content}</div>
-            <button className="j-modal-close" onClick={() => setSelectedEntry(null)}>
-              close ↑
-            </button>
+            <button className="j-modal-close" onClick={() => setSelectedEntry(null)}>close ↑</button>
           </div>
         </div>
       )}
 
       <div className="j-wrap">
-
-        {/* ── EDITOR ── */}
+        {/* EDITOR */}
         <div className="j-editor">
           <div className="j-top">
             <div>
@@ -396,9 +389,7 @@ export default function Journal({ onDone }) {
                   fontFamily: 'DM Mono, monospace', fontSize: 9,
                   color: '#C8A95A', letterSpacing: '0.15em',
                   marginTop: 4, textTransform: 'uppercase'
-                }}>
-                  ● Updating today's entry
-                </div>
+                }}>● Updating today's entry</div>
               )}
             </div>
             <div className={`j-wordcount${wordCount > 0 ? ' active' : ''}`}>
@@ -417,9 +408,7 @@ export default function Journal({ onDone }) {
           />
 
           <div className="j-footer">
-            <div className="j-footer-meta">
-              {saved ? '✓ saved' : 'unsaved'}
-            </div>
+            <div className="j-footer-meta">{saved ? '✓ saved' : 'unsaved'}</div>
             <button
               className={`j-save${saved ? ' done' : ''}`}
               disabled={!content.trim() || saving}
@@ -430,10 +419,9 @@ export default function Journal({ onDone }) {
           </div>
         </div>
 
-        {/* ── SIDEBAR ── */}
+        {/* SIDEBAR */}
         <div className="j-sidebar">
           <div className="j-sidebar-title">Past entries</div>
-
           {loading ? (
             <div className="j-empty">Loading...</div>
           ) : recentEntries.length === 0 ? (
@@ -463,7 +451,6 @@ export default function Journal({ onDone }) {
             </div>
           )}
         </div>
-
       </div>
     </>
   );
