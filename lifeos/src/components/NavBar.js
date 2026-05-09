@@ -1,96 +1,89 @@
 import React, { useState, useRef, useEffect } from 'react';
-import './NavBar.css';
 
-// Core nav tabs — always visible
-const CORE_TABS = [
+// 5 primary tabs always visible
+const PRIMARY_TABS = [
   { id: 'dashboard', icon: '⬡', label: 'HQ' },
-  { id: 'stats',     icon: '◎', label: 'STATS' },
+  { id: 'log',       icon: '◈', label: 'LOG' },
   { id: 'music',     icon: '♪', label: 'SOUND' },
   { id: 'coach',     icon: '◆', label: 'ARIA' },
+  { id: 'stats',     icon: '◎', label: 'STATS' },
 ];
 
-// Extra tabs in the "+" tray
-const TRAY_TABS = [
-  { id: 'log',     icon: '◈', label: 'LOG',    color: '#C8A95A' },
-  { id: 'mood',    icon: '◉', label: 'MOOD',   color: '#5B8DEF' },
-  { id: 'journal', icon: '✦', label: 'JOURNAL',color: '#EF8C5B' },
-  { id: 'focus',   icon: '◷', label: 'FOCUS',  color: '#5BEF8C' },
-  { id: 'goals',   icon: '◇', label: 'GOALS',  color: '#C45BEF' },
+// Secondary tabs in a clean popover
+const SECONDARY_TABS = [
+  { id: 'mood',    icon: '◉', label: 'MOOD',    color: '#5B8DEF' },
+  { id: 'journal', icon: '✦', label: 'JOURNAL', color: '#EF8C5B' },
+  { id: 'focus',   icon: '◷', label: 'FOCUS',   color: '#5BEF8C' },
+  { id: 'goals',   icon: '◇', label: 'GOALS',   color: '#C45BEF' },
 ];
+
+const SECONDARY_IDS = SECONDARY_TABS.map(t => t.id);
 
 export default function NavBar({ active, onNavigate, learnMode, onLearnToggle }) {
-  const [trayOpen, setTrayOpen] = useState(false);
-  const trayRef = useRef(null);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const moreRef = useRef(null);
 
-  // Close tray when clicking outside
   useEffect(() => {
-    function handleClick(e) {
-      if (trayRef.current && !trayRef.current.contains(e.target)) {
-        setTrayOpen(false);
-      }
+    if (!moreOpen) return;
+    function onOutside(e) {
+      if (moreRef.current && !moreRef.current.contains(e.target)) setMoreOpen(false);
     }
-    if (trayOpen) document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, [trayOpen]);
+    document.addEventListener('mousedown', onOutside);
+    return () => document.removeEventListener('mousedown', onOutside);
+  }, [moreOpen]);
 
-  // Close tray after navigating
-  function handleTrayNav(id) {
+  function nav(id) {
     onNavigate(id);
-    setTrayOpen(false);
+    setMoreOpen(false);
   }
 
-  const isTrayActive = TRAY_TABS.some(t => t.id === active);
+  const isSecondaryActive = SECONDARY_IDS.includes(active);
 
   return (
     <>
       <style>{`
-        .navbar {
+        .nb {
           position: fixed;
-          bottom: 0;
-          left: 0;
-          right: 0;
+          bottom: 0; left: 0; right: 0;
           z-index: 50;
-          padding: 0 0 env(safe-area-inset-bottom);
-          background: rgba(10,10,10,0.92);
-          backdrop-filter: blur(20px);
-          -webkit-backdrop-filter: blur(20px);
+          padding-bottom: env(safe-area-inset-bottom);
+          background: rgba(8,8,8,0.96);
+          backdrop-filter: blur(24px);
+          -webkit-backdrop-filter: blur(24px);
           border-top: 1px solid #161616;
         }
-
-        .navbar-inner {
+        .nb-inner {
           display: flex;
-          align-items: center;
+          align-items: flex-end;
           justify-content: space-around;
-          padding: 8px 16px 10px;
-          max-width: 640px;
+          padding: 10px 8px 12px;
+          max-width: 500px;
           margin: 0 auto;
           position: relative;
         }
 
-        .nav-item {
+        /* ── Primary tab ── */
+        .nb-tab {
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 3px;
+          gap: 4px;
           background: none;
           border: none;
           cursor: pointer;
-          padding: 6px 12px;
+          padding: 4px 10px;
           border-radius: 10px;
           transition: background 0.15s;
-          position: relative;
+          min-width: 44px;
         }
-
-        .nav-item:hover { background: #111; }
-
-        .nav-icon {
-          font-size: 18px;
+        .nb-tab:hover { background: #111; }
+        .nb-icon {
+          font-size: 17px;
           line-height: 1;
-          color: #2e2e2e;
+          color: #2c2c2c;
           transition: color 0.2s;
         }
-
-        .nav-label {
+        .nb-label {
           font-family: 'DM Mono', monospace;
           font-size: 8px;
           letter-spacing: 0.15em;
@@ -98,218 +91,147 @@ export default function NavBar({ active, onNavigate, learnMode, onLearnToggle })
           text-transform: uppercase;
           transition: color 0.2s;
         }
-
-        .nav-dot {
+        .nb-tab--active .nb-icon { color: #e8e3da; }
+        .nb-tab--active .nb-label { color: #C8A95A; }
+        .nb-dot {
           position: absolute;
-          bottom: -2px;
+          bottom: -1px;
           left: 50%;
           transform: translateX(-50%);
-          width: 3px;
-          height: 3px;
+          width: 3px; height: 3px;
           border-radius: 50%;
           background: #C8A95A;
         }
 
-        .nav-item--active .nav-icon { color: #e8e3da; }
-        .nav-item--active .nav-label { color: #C8A95A; }
-
-        /* PLUS BUTTON */
-        .nav-plus {
-          width: 44px;
-          height: 44px;
-          border-radius: 50%;
-          border: 1px solid #1e1e1e;
-          background: #111;
-          color: #444;
-          font-size: 20px;
-          cursor: pointer;
+        /* ── More button ── */
+        .nb-more-wrap { position: relative; }
+        .nb-more {
           display: flex;
-          align-items: center;
-          justify-content: center;
-          transition: all 0.2s;
-          line-height: 1;
           flex-direction: column;
-          gap: 3px;
-          padding: 0;
-          position: relative;
+          align-items: center;
+          gap: 4px;
+          background: none;
+          border: none;
+          cursor: pointer;
+          padding: 4px 10px;
+          border-radius: 10px;
+          transition: background 0.15s;
+          min-width: 44px;
         }
-
-        .nav-plus.tray-active {
-          border-color: #C8A95A;
-          color: #C8A95A;
-          background: rgba(200,169,90,0.08);
+        .nb-more:hover { background: #111; }
+        .nb-more-icon {
+          width: 17px; height: 17px;
+          display: flex; align-items: center; justify-content: center;
+          font-size: 14px; line-height: 1;
+          color: #2c2c2c;
+          transition: color 0.2s, transform 0.25s cubic-bezier(0.4,0,0.2,1);
         }
-
-        .nav-plus:hover { border-color: #2a2a2a; color: #666; }
-
-        .nav-plus-icon {
-          font-size: 18px;
-          line-height: 1;
-          transition: transform 0.25s cubic-bezier(0.4,0,0.2,1);
-          display: block;
-        }
-
-        .nav-plus.open .nav-plus-icon { transform: rotate(45deg); }
-
-        .nav-plus-label {
+        .nb-more--active .nb-more-icon { color: #C8A95A; transform: rotate(45deg); }
+        .nb-more--secondary .nb-more-icon { color: #C8A95A; }
+        .nb-more-label {
           font-family: 'DM Mono', monospace;
           font-size: 8px;
-          letter-spacing: 0.12em;
+          letter-spacing: 0.15em;
           color: #2a2a2a;
           text-transform: uppercase;
+          transition: color 0.2s;
         }
+        .nb-more--active .nb-more-label,
+        .nb-more--secondary .nb-more-label { color: #C8A95A; }
 
-        /* TRAY */
-        .nav-tray {
+        /* ── Popover ── */
+        .nb-popover {
           position: absolute;
-          bottom: calc(100% + 12px);
+          bottom: calc(100% + 10px);
           left: 50%;
-          transform: translateX(-50%);
-          background: #0f0f0f;
+          transform: translateX(-50%) translateY(6px);
+          background: #0e0e0e;
           border: 1px solid #1e1e1e;
-          border-radius: 16px;
-          padding: 8px;
+          border-radius: 14px;
+          padding: 6px;
           display: flex;
-          gap: 4px;
+          gap: 2px;
           opacity: 0;
           pointer-events: none;
-          transform: translateX(-50%) translateY(8px);
-          transition: opacity 0.2s, transform 0.2s cubic-bezier(0.4,0,0.2,1);
-          box-shadow: 0 -8px 40px rgba(0,0,0,0.6);
+          transition: opacity 0.18s, transform 0.18s cubic-bezier(0.4,0,0.2,1);
+          box-shadow: 0 -4px 32px rgba(0,0,0,0.7);
           white-space: nowrap;
+          z-index: 60;
         }
-
-        .nav-tray.open {
+        .nb-popover.open {
           opacity: 1;
           pointer-events: all;
           transform: translateX(-50%) translateY(0);
         }
-
-        .tray-item {
+        .nb-pop-item {
           display: flex;
           flex-direction: column;
           align-items: center;
           gap: 4px;
-          padding: 10px 14px;
-          border-radius: 12px;
+          padding: 10px 13px;
+          border-radius: 10px;
           border: none;
           background: transparent;
           cursor: pointer;
-          transition: background 0.15s;
+          transition: background 0.12s;
         }
-
-        .tray-item:hover { background: #141414; }
-
-        .tray-item.active {
-          background: #141414;
+        .nb-pop-item:hover { background: #151515; }
+        .nb-pop-item.active { background: #141414; }
+        .nb-pop-icon {
+          font-size: 16px; line-height: 1;
+          color: #2e2e2e;
+          transition: color 0.12s;
         }
-
-        .tray-icon {
-          font-size: 17px;
-          line-height: 1;
-          color: #333;
-          transition: color 0.15s;
-        }
-
-        .tray-item.active .tray-icon,
-        .tray-item:hover .tray-icon { color: var(--tc); }
-
-        .tray-label {
+        .nb-pop-item:hover .nb-pop-icon,
+        .nb-pop-item.active .nb-pop-icon { color: var(--pc); }
+        .nb-pop-label {
           font-family: 'DM Mono', monospace;
           font-size: 8px;
           letter-spacing: 0.12em;
           color: #2a2a2a;
           text-transform: uppercase;
-          transition: color 0.15s;
+          transition: color 0.12s;
         }
-
-        .tray-item.active .tray-label { color: var(--tc); }
-
-        /* LEARN BUTTON */
-        .nav-learn {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 3px;
-          background: none;
-          border: none;
-          cursor: pointer;
-          padding: 6px 12px;
-          border-radius: 10px;
-          transition: background 0.15s;
-        }
-
-        .nav-learn:hover { background: #111; }
-
-        .nav-learn-icon {
-          width: 20px;
-          height: 20px;
-          border-radius: 6px;
-          background: ${learnMode ? '#7C5CBF' : '#1a1a1a'};
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 11px;
-          transition: background 0.2s;
-          color: ${learnMode ? '#fff' : '#333'};
-        }
-
-        .nav-learn-label {
-          font-family: 'DM Mono', monospace;
-          font-size: 8px;
-          letter-spacing: 0.15em;
-          color: ${learnMode ? '#7C5CBF' : '#2a2a2a'};
-          text-transform: uppercase;
-          transition: color 0.2s;
-        }
+        .nb-pop-item.active .nb-pop-label { color: var(--pc); }
       `}</style>
 
-      <nav className="navbar">
-        <div className="navbar-inner" ref={trayRef}>
-
-          {/* CORE TABS */}
-          {CORE_TABS.map(tab => (
+      <nav className="nb">
+        <div className="nb-inner">
+          {PRIMARY_TABS.map(tab => (
             <button
               key={tab.id}
-              className={`nav-item ${active === tab.id ? 'nav-item--active' : ''}`}
-              onClick={() => onNavigate(tab.id)}
+              className={`nb-tab${active === tab.id ? ' nb-tab--active' : ''}`}
+              onClick={() => nav(tab.id)}
             >
-              <span className="nav-icon">{tab.icon}</span>
-              <span className="nav-label">{tab.label}</span>
-              {active === tab.id && <span className="nav-dot" />}
+              <span className="nb-icon">{tab.icon}</span>
+              <span className="nb-label">{tab.label}</span>
+              {active === tab.id && <span className="nb-dot" />}
             </button>
           ))}
 
-          {/* PLUS — tray toggle */}
-          <div style={{ position: 'relative' }}>
-            <div className={`nav-tray${trayOpen ? ' open' : ''}`}>
-              {TRAY_TABS.map(tab => (
+          {/* MORE */}
+          <div className="nb-more-wrap" ref={moreRef}>
+            <div className={`nb-popover${moreOpen ? ' open' : ''}`}>
+              {SECONDARY_TABS.map(tab => (
                 <button
                   key={tab.id}
-                  className={`tray-item${active === tab.id ? ' active' : ''}`}
-                  style={{ '--tc': tab.color }}
-                  onClick={() => handleTrayNav(tab.id)}
+                  className={`nb-pop-item${active === tab.id ? ' active' : ''}`}
+                  style={{ '--pc': tab.color }}
+                  onClick={() => nav(tab.id)}
                 >
-                  <span className="tray-icon">{tab.icon}</span>
-                  <span className="tray-label">{tab.label}</span>
+                  <span className="nb-pop-icon">{tab.icon}</span>
+                  <span className="nb-pop-label">{tab.label}</span>
                 </button>
               ))}
             </div>
-
             <button
-              className={`nav-plus${trayOpen ? ' open' : ''}${isTrayActive ? ' tray-active' : ''}`}
-              onClick={() => setTrayOpen(o => !o)}
+              className={`nb-more${moreOpen ? ' nb-more--active' : ''}${isSecondaryActive && !moreOpen ? ' nb-more--secondary' : ''}`}
+              onClick={() => setMoreOpen(o => !o)}
             >
-              <span className="nav-plus-icon">+</span>
+              <span className="nb-more-icon">+</span>
+              <span className="nb-more-label">MORE</span>
             </button>
           </div>
-
-          {/* LEARN */}
-          <button className="nav-learn" onClick={onLearnToggle}>
-            <div className="nav-learn-icon">⬡</div>
-            <span className="nav-learn-label">LEARN</span>
-          </button>
-
         </div>
       </nav>
     </>
